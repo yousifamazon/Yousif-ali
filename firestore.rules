@@ -72,6 +72,11 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "yusfa886@gmail.com" && request.auth.token.email_verified == true);
+    }
+
     function isValidDate(dateStr) {
       return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}$");
     }
@@ -94,7 +99,7 @@ service cloud.firestore {
 
     function isValidTask(data) {
       return data.id is string &&
-             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 500 &&
              data.date is string && isValidDate(data.date) &&
              data.completed is bool &&
              data.userId == request.auth.uid &&
@@ -106,7 +111,7 @@ service cloud.firestore {
              data.type in ['income', 'expense', 'savings'] &&
              data.amount is number && data.amount >= 0 &&
              data.category in ['work', 'personal'] &&
-             data.description is string && data.description.size() >= 1 && data.description.size() <= 500 &&
+             data.description is string && data.description.size() >= 0 && data.description.size() <= 1000 &&
              data.date is string && isValidDate(data.date) &&
              data.userId == request.auth.uid &&
              data.createdAt is string && isValidDateTime(data.createdAt);

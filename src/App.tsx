@@ -81,7 +81,7 @@ import {
   OperationType 
 } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, getDocs, getDoc } from 'firebase/firestore';
 
 // Polyfill for crypto.randomUUID if not available
 if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
@@ -563,12 +563,47 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   const [tempCustomWorkType, setTempCustomWorkType] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setIsAuthReady(true);
+      
+      if (currentUser) {
+        // Check if we should migrate local data
+        const tasksRef = collection(db, `users/${currentUser.uid}/tasks`);
+        const transRef = collection(db, `users/${currentUser.uid}/transactions`);
+        const settingsRef = doc(db, `users/${currentUser.uid}/settings/main`);
+        
+        const [tasksSnap, transSnap, settingsSnap] = await Promise.all([
+          getDocs(tasksRef),
+          getDocs(transRef),
+          getDoc(settingsRef)
+        ]);
+
+        // Migrate tasks if cloud is empty but local is not
+        if (tasksSnap.empty && data.tasks.length > 0) {
+          console.log("Migrating local tasks to Firebase...");
+          for (const task of data.tasks) {
+            await syncTaskToFirebase(task);
+          }
+        }
+
+        // Migrate transactions if cloud is empty but local is not
+        if (transSnap.empty && data.transactions.length > 0) {
+          console.log("Migrating local transactions to Firebase...");
+          for (const trans of data.transactions) {
+            await syncTransactionToFirebase(trans);
+          }
+        }
+
+        // Migrate settings if cloud is empty
+        if (!settingsSnap.exists() && (data.descriptions.length > 0 || Object.keys(data.history || {}).length > 0)) {
+          console.log("Migrating local settings to Firebase...");
+          await syncSettingsToFirebase(data.descriptions, data.history || {});
+        }
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [data.tasks.length, data.transactions.length]);
 
   // Sync from Firestore
   useEffect(() => {
@@ -690,9 +725,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       if (user) {
         try {
           await syncTaskToFirebase(updatedTask);
-        } catch (err) {
-          console.error("Failed to sync task:", err);
-          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        } catch (err: any) {
+          console.error("Failed to sync task (edit):", err);
+          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
+          try {
+            const errInfo = JSON.parse(err.message);
+            if (errInfo.error.includes('permission-denied')) {
+              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
+            }
+          } catch (e) {}
+          alert(errorMessage);
         }
       }
     } else {
@@ -708,9 +750,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       if (user) {
         try {
           await syncTaskToFirebase(task);
-        } catch (err) {
-          console.error("Failed to sync task:", err);
-          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        } catch (err: any) {
+          console.error("Failed to sync task (new):", err);
+          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
+          try {
+            const errInfo = JSON.parse(err.message);
+            if (errInfo.error.includes('permission-denied')) {
+              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
+            }
+          } catch (e) {}
+          alert(errorMessage);
         }
       }
     }
@@ -790,9 +839,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       if (user) {
         try {
           await syncTransactionToFirebase(updatedTransaction);
-        } catch (err) {
-          console.error("Failed to sync transaction:", err);
-          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        } catch (err: any) {
+          console.error("Failed to sync transaction (edit):", err);
+          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
+          try {
+            const errInfo = JSON.parse(err.message);
+            if (errInfo.error.includes('permission-denied')) {
+              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
+            }
+          } catch (e) {}
+          alert(errorMessage);
         }
       }
     } else {
@@ -807,9 +863,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       if (user) {
         try {
           await syncTransactionToFirebase(transaction);
-        } catch (err) {
-          console.error("Failed to sync transaction:", err);
-          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        } catch (err: any) {
+          console.error("Failed to sync transaction (new):", err);
+          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
+          try {
+            const errInfo = JSON.parse(err.message);
+            if (errInfo.error.includes('permission-denied')) {
+              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
+            }
+          } catch (e) {}
+          alert(errorMessage);
         }
       }
     }

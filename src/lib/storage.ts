@@ -60,10 +60,14 @@ export const syncTaskToFirebase = async (task: Task) => {
   if (!auth.currentUser) return;
   const path = `users/${auth.currentUser.uid}/tasks/${task.id}`;
   try {
-    await setDoc(doc(db, path), {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (task.date + 'T00:00:00Z');
+    
+    await setDoc(docRef, {
       ...task,
       userId: auth.currentUser.uid,
-      createdAt: task.date + 'T00:00:00Z' // Ensure valid format for rules
+      createdAt: createdAt
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -84,10 +88,14 @@ export const syncTransactionToFirebase = async (transaction: Transaction) => {
   if (!auth.currentUser) return;
   const path = `users/${auth.currentUser.uid}/transactions/${transaction.id}`;
   try {
-    await setDoc(doc(db, path), {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (transaction.date + 'T00:00:00Z');
+
+    await setDoc(docRef, {
       ...transaction,
       userId: auth.currentUser.uid,
-      createdAt: transaction.date + 'T00:00:00Z'
+      createdAt: createdAt
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
