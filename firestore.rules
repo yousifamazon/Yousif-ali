@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}/tasks
+    // Document ID: {taskId}
+    // Fields:
+    //   - id: string (required)
+    //   - title: string (required, size 1-200)
+    //   - details: array of objects (optional)
+    //   - date: string (required, format date)
+    //   - completed: boolean (required)
+    //   - category: string (enum: work, personal, other)
+    //   - priority: string (enum: low, medium, high)
+    //   - workTypes: array of strings (optional)
+    //   - dueDate: string (optional, format date)
+    //   - userId: string (required, must match owner)
+    //   - createdAt: string (required, format date-time)
+    //
+    // Collection: /users/{userId}/transactions
+    // Document ID: {transactionId}
+    // Fields:
+    //   - id: string (required)
+    //   - type: string (required, enum: income, expense)
+    //   - amount: number (required, positive)
+    //   - category: string (required, enum: work, personal)
+    //   - description: string (required, size 1-500)
+    //   - date: string (required, format date)
+    //   - subCategory: string (optional)
+    //   - paymentMethod: string (enum: cash, factory_money, own_money)
+    //   - milkQuantity: number (optional)
+    //   - fuelLiters: number (optional)
+    //   - fuelPricePerLiter: number (optional)
+    //   - fuelType: string (optional)
+    //   - workLocation: string (optional)
+    //   - shopName: string (optional)
+    //   - itemsBought: string (optional)
+    //   - maintenanceType: string (optional)
+    //   - receiptItems: array of objects (optional)
+    //   - driverName: string (optional)
+    //   - customerName: string (optional)
+    //   - invoiceNumber: string (optional)
+    //   - receiptImage: string (optional, base64/url)
+    //   - isDelivery: boolean (optional)
+    //   - discount: number (optional)
+    //   - paidAmount: number (optional)
+    //   - remainingAmount: number (optional)
+    //   - debtAmount: number (optional)
+    //   - userId: string (required, must match owner)
+    //   - createdAt: string (required, format date-time)
+    //
+    // Collection: /users/{userId}/settings
+    // Document ID: main
+    // Fields:
+    //   - descriptions: array of strings (optional)
+    //   - history: map (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidDate(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    function isValidDateTime(dateTimeStr) {
+      return dateTimeStr is string && dateTimeStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidTask(data) {
+      return data.id is string &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.date is string && isValidDate(data.date) &&
+             data.completed is bool &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string && isValidDateTime(data.createdAt);
+    }
+
+    function isValidTransaction(data) {
+      return data.id is string &&
+             data.type in ['income', 'expense'] &&
+             data.amount is number && data.amount >= 0 &&
+             data.category in ['work', 'personal'] &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 500 &&
+             data.date is string && isValidDate(data.date) &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string && isValidDateTime(data.createdAt);
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      
+      match /tasks/{taskId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTask(request.resource.data);
+        allow update: if isOwner(userId) && isValidTask(request.resource.data) && 
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /transactions/{transactionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(request.resource.data);
+        allow update: if isOwner(userId) && isValidTransaction(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /settings/{settingId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+    }
+  }
+}

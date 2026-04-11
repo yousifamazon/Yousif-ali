@@ -1,0 +1,5 @@
+{
+  "name": "رۆژانەی یوسف",
+  "description": "سیستەمێکی بەڕێوەبردنی کاروباری رۆژانە و خەرجییەکان بۆ یوسف",
+  "requestFramePermissions": ["camera"]
+}

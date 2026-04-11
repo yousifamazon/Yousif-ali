@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A task or job to be done",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": { "type": "string" },
+              "work": { "type": "string" }
+            }
+          }
+        },
+        "date": { "type": "string", "format": "date" },
+        "completed": { "type": "boolean" },
+        "category": { "type": "string", "enum": ["work", "personal", "other"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "workTypes": { "type": "array", "items": { "type": "string" } },
+        "dueDate": { "type": "string", "format": "date" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "date", "completed", "userId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial transaction (income or expense)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "amount": { "type": "number" },
+        "category": { "type": "string", "enum": ["work", "personal"] },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "subCategory": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["cash", "factory_money", "own_money"] },
+        "milkQuantity": { "type": "number" },
+        "fuelLiters": { "type": "number" },
+        "fuelPricePerLiter": { "type": "number" },
+        "fuelType": { "type": "string" },
+        "workLocation": { "type": "string" },
+        "shopName": { "type": "string" },
+        "itemsBought": { "type": "string" },
+        "maintenanceType": { "type": "string" },
+        "receiptItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" }
+            }
+          }
+        },
+        "driverName": { "type": "string" },
+        "customerName": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "receiptImage": { "type": "string" },
+        "isDelivery": { "type": "boolean" },
+        "discount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "remainingAmount": { "type": "number" },
+        "debtAmount": { "type": "number" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "amount", "category", "description", "date", "userId"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User specific settings and metadata",
+      "type": "object",
+      "properties": {
+        "descriptions": { "type": "array", "items": { "type": "string" } },
+        "history": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User tasks"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User transactions"
+    },
+    "/users/{userId}/settings/main": {
+      "schema": "UserSettings",
+      "description": "User settings"
+    }
+  }
+}
