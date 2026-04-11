@@ -500,7 +500,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     description: '', 
     details: [{ subject: '', work: '' }],
     date: format(new Date(), 'yyyy-MM-dd'), 
-    category: 'work',
+    category: 'personal',
     priority: 'medium',
     workTypes: [],
     dueDate: format(new Date(), 'yyyy-MM-dd')
@@ -510,9 +510,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     amount: 0, 
     description: '', 
     date: format(new Date(), 'yyyy-MM-dd'), 
-    category: 'work',
+    category: 'personal',
     type: 'expense',
-    paymentMethod: 'factory_money',
+    paymentMethod: 'cash',
     milkQuantity: 0,
     fuelLiters: 0,
     fuelPricePerLiter: 0,
@@ -659,46 +659,56 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
   // --- Handlers ---
 
-  const addTask = () => {
+  const addTask = async () => {
     if (!newTask.title) return;
     
+    const taskData = {
+      title: newTask.title || '',
+      description: newTask.description,
+      details: newTask.details || [],
+      date: newTask.date || format(new Date(), 'yyyy-MM-dd'),
+      category: newTask.category || 'personal',
+      priority: newTask.priority || 'medium',
+      workTypes: newTask.workTypes || []
+    };
+
     if (editingTaskId) {
       const updatedTask = {
         ...data.tasks.find(t => t.id === editingTaskId)!,
-        title: newTask.title || '',
-        description: newTask.description,
-        details: newTask.details || [],
-        date: newTask.date || format(new Date(), 'yyyy-MM-dd'),
-        category: newTask.category || 'work',
-        priority: newTask.priority || 'medium',
-        workTypes: newTask.workTypes || []
+        ...taskData
       };
       
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        tasks: prev.tasks.map(t => t.id === editingTaskId ? updatedTask : t)
+      }));
+
       if (user) {
-        syncTaskToFirebase(updatedTask);
-      } else {
-        setData(prev => ({
-          ...prev,
-          tasks: prev.tasks.map(t => t.id === editingTaskId ? updatedTask : t)
-        }));
+        try {
+          await syncTaskToFirebase(updatedTask);
+        } catch (err) {
+          console.error("Failed to sync task:", err);
+          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        }
       }
     } else {
       const task: Task = {
         id: crypto.randomUUID(),
-        title: newTask.title || '',
-        description: newTask.description,
-        details: newTask.details || [],
-        date: newTask.date || format(new Date(), 'yyyy-MM-dd'),
-        category: newTask.category || 'work',
-        priority: newTask.priority || 'medium',
-        workTypes: newTask.workTypes || [],
+        ...taskData,
         completed: false
       };
       
+      // Optimistic update
+      setData(prev => ({ ...prev, tasks: [task, ...prev.tasks] }));
+
       if (user) {
-        syncTaskToFirebase(task);
-      } else {
-        setData(prev => ({ ...prev, tasks: [task, ...prev.tasks] }));
+        try {
+          await syncTaskToFirebase(task);
+        } catch (err) {
+          console.error("Failed to sync task:", err);
+          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        }
       }
     }
     
@@ -707,7 +717,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setNewTask(initialTaskState);
   };
 
-  const addTransaction = () => {
+  const addTransaction = async () => {
     let finalAmount = Number(newTransaction.amount) || 0;
     
     // Auto-calculate fuel total
@@ -715,7 +725,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       finalAmount = newTransaction.fuelLiters * newTransaction.fuelPricePerLiter;
     }
 
-    // Auto-calculate total from receipt items if they exist (for electricity or any other expense)
+    // Auto-calculate total from receipt items if they exist
     const isMilk = newTransaction.description === 'هێنانەوەی شیر';
     const isFuel = newTransaction.description === 'بەنزین';
     
@@ -728,12 +738,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     const transactionData = {
       amount: finalAmount,
-      description: newTransaction.description || '',
+      description: newTransaction.description || 'بێ وەسف',
       date: newTransaction.date || format(new Date(), 'yyyy-MM-dd'),
       type: newTransaction.type || 'expense',
-      category: newTransaction.category || 'work',
+      category: newTransaction.category || 'personal',
       subCategory: newTransaction.subCategory,
-      paymentMethod: newTransaction.paymentMethod || 'factory_money',
+      paymentMethod: newTransaction.paymentMethod || 'cash',
       milkQuantity: newTransaction.milkQuantity,
       fuelLiters: newTransaction.fuelLiters,
       fuelPricePerLiter: newTransaction.fuelPricePerLiter,
@@ -755,23 +765,37 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         ...data.transactions.find(t => t.id === editingTransactionId)!, 
         ...transactionData 
       };
+      
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        transactions: prev.transactions.map(t => t.id === editingTransactionId ? updatedTransaction : t)
+      }));
+
       if (user) {
-        syncTransactionToFirebase(updatedTransaction);
-      } else {
-        setData(prev => ({
-          ...prev,
-          transactions: prev.transactions.map(t => t.id === editingTransactionId ? updatedTransaction : t)
-        }));
+        try {
+          await syncTransactionToFirebase(updatedTransaction);
+        } catch (err) {
+          console.error("Failed to sync transaction:", err);
+          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        }
       }
     } else {
       const transaction: Transaction = {
         id: crypto.randomUUID(),
         ...transactionData
       };
+      
+      // Optimistic update
+      setData(prev => ({ ...prev, transactions: [transaction, ...prev.transactions] }));
+
       if (user) {
-        syncTransactionToFirebase(transaction);
-      } else {
-        setData(prev => ({ ...prev, transactions: [transaction, ...prev.transactions] }));
+        try {
+          await syncTransactionToFirebase(transaction);
+        } catch (err) {
+          console.error("Failed to sync transaction:", err);
+          alert('کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا');
+        }
       }
     }
 
@@ -867,30 +891,43 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setShowResetModal(false);
   };
 
-  const toggleTask = (id: string) => {
+  const toggleTask = async (id: string) => {
     const task = data.tasks.find(t => t.id === id);
     if (!task) return;
     
     const updatedTask = { ...task, completed: !task.completed };
+    
+    // Optimistic update
+    setData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => t.id === id ? updatedTask : t)
+    }));
+
     if (user) {
-      syncTaskToFirebase(updatedTask);
-    } else {
-      setData(prev => ({
-        ...prev,
-        tasks: prev.tasks.map(t => t.id === id ? updatedTask : t)
-      }));
+      try {
+        await syncTaskToFirebase(updatedTask);
+      } catch (err) {
+        console.error("Failed to toggle task:", err);
+        // Rollback happens automatically via onSnapshot if sync fails
+      }
     }
   };
 
-  const deleteItem = (id: string, type: 'task' | 'transaction') => {
+  const deleteItem = async (id: string, type: 'task' | 'transaction') => {
+    // Optimistic update
+    setData(prev => ({
+      ...prev,
+      [type === 'task' ? 'tasks' : 'transactions']: prev[type === 'task' ? 'tasks' : 'transactions'].filter((item: any) => item.id !== id)
+    }));
+
     if (user) {
-      if (type === 'task') deleteTaskFromFirebase(id);
-      else deleteTransactionFromFirebase(id);
-    } else {
-      setData(prev => ({
-        ...prev,
-        [type === 'task' ? 'tasks' : 'transactions']: prev[type === 'task' ? 'tasks' : 'transactions'].filter((item: any) => item.id !== id)
-      }));
+      try {
+        if (type === 'task') await deleteTaskFromFirebase(id);
+        else await deleteTransactionFromFirebase(id);
+      } catch (err) {
+        console.error("Failed to delete item:", err);
+        // Rollback happens automatically via onSnapshot if sync fails
+      }
     }
   };
 
@@ -908,13 +945,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             </h2>
             <div className="flex gap-3">
               <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none" onClick={() => {
-                setNewTransaction({ type: 'income', category: 'personal' });
+                setNewTransaction(p => ({ ...p, type: 'income', category: 'personal' }));
                 setShowTransactionModal(true);
               }}>
                 <Plus className="w-4 h-4" /> زیادکردنی داهات
               </Button>
               <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none" onClick={() => {
-                setNewTransaction({ type: 'expense', category: 'personal' });
+                setNewTransaction(p => ({ ...p, type: 'expense', category: 'personal' }));
                 setShowTransactionModal(true);
               }}>
                 <ArrowUpRight className="w-4 h-4" /> خەرجی نوێ
@@ -969,11 +1006,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <button 
             key={i} 
             onClick={() => {
-              setNewTransaction({ 
+              setNewTransaction(p => ({ 
+                ...p,
                 description: action.label, 
                 category: 'personal',
                 type: 'expense'
-              });
+              }));
               setShowTransactionModal(true);
             }}
             className="p-4 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2 group active:scale-95"
@@ -1225,9 +1263,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     return (
       <div className="space-y-6 pb-20">
         <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-black">{category === 'work' ? 'دارایی کارگە' : 'خەرجی تایبەت'}</h2>
+          <h2 className="text-3xl font-black">{category === 'work' ? 'دارایی گشتی' : 'خەرجی تایبەت'}</h2>
           <Button onClick={() => {
-            setNewTransaction({ category, type: category === 'work' ? 'income' : 'expense' });
+            setNewTransaction(p => ({ ...p, category, type: category === 'work' ? 'income' : 'expense' }));
             setShowTransactionModal(true);
           }} size="lg">
             <Plus className="w-5 h-5" /> تۆماری نوێ
