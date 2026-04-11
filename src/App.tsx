@@ -520,7 +520,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     workLocation: '',
     shopName: '',
     itemsBought: '',
-    maintenanceType: 'ئیشی کارەبا',
+    maintenanceType: undefined,
     receiptItems: [{ name: '', price: 0 }],
     driverName: '',
     customerName: '',
@@ -739,7 +739,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     if (!finalAmount && !newTransaction.description && !newTransaction.receiptImage) return;
 
-    const transactionData = {
+    const transactionData: any = {
       amount: finalAmount,
       description: newTransaction.description || 'بێ وەسف',
       date: newTransaction.date || format(new Date(), 'yyyy-MM-dd'),
@@ -747,21 +747,33 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       category: newTransaction.category || 'personal',
       subCategory: newTransaction.subCategory,
       paymentMethod: newTransaction.paymentMethod || 'cash',
-      milkQuantity: newTransaction.milkQuantity,
-      fuelLiters: newTransaction.fuelLiters,
-      fuelPricePerLiter: newTransaction.fuelPricePerLiter,
-      fuelType: newTransaction.fuelType,
-      workLocation: newTransaction.workLocation,
-      shopName: newTransaction.shopName,
-      itemsBought: newTransaction.itemsBought,
-      maintenanceType: newTransaction.maintenanceType,
       receiptItems: newTransaction.receiptItems,
-      driverName: newTransaction.driverName,
-      customerName: newTransaction.customerName,
-      invoiceNumber: newTransaction.invoiceNumber,
       receiptImage: newTransaction.receiptImage,
       isDelivery: newTransaction.isDelivery
     };
+
+    // Only add work-specific fields if it's a work transaction
+    if (newTransaction.category === 'work') {
+      transactionData.milkQuantity = newTransaction.milkQuantity;
+      transactionData.maintenanceType = newTransaction.maintenanceType;
+      transactionData.workLocation = newTransaction.workLocation;
+      transactionData.driverName = newTransaction.driverName;
+      transactionData.customerName = newTransaction.customerName;
+      transactionData.invoiceNumber = newTransaction.invoiceNumber;
+    }
+
+    // Add fuel fields if relevant
+    if (newTransaction.description === 'بەنزین' || newTransaction.fuelLiters) {
+      transactionData.fuelLiters = newTransaction.fuelLiters;
+      transactionData.fuelPricePerLiter = newTransaction.fuelPricePerLiter;
+      transactionData.fuelType = newTransaction.fuelType;
+    }
+
+    // Add shop fields if relevant
+    if (newTransaction.shopName) {
+      transactionData.shopName = newTransaction.shopName;
+      transactionData.itemsBought = newTransaction.itemsBought;
+    }
 
     if (editingTransactionId) {
       const updatedTransaction = { 
@@ -959,19 +971,19 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             </div>
             <div className="flex flex-wrap gap-3">
               <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
-                setNewTransaction(p => ({ ...p, type: 'income', category: 'personal' }));
+                setNewTransaction({ ...initialTransactionState, type: 'income', category: 'personal' });
                 setShowTransactionModal(true);
               }}>
                 <Plus className="w-4 h-4" /> داهات
               </Button>
               <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
-                setNewTransaction(p => ({ ...p, type: 'expense', category: 'personal' }));
+                setNewTransaction({ ...initialTransactionState, type: 'expense', category: 'personal' });
                 setShowTransactionModal(true);
               }}>
                 <ArrowUpRight className="w-4 h-4" /> خەرجی
               </Button>
               <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
-                setNewTransaction(p => ({ ...p, type: 'savings', category: 'personal', description: 'پارە هەڵگرتن' }));
+                setNewTransaction({ ...initialTransactionState, type: 'savings', category: 'personal', description: 'پارە هەڵگرتن' });
                 setShowTransactionModal(true);
               }}>
                 <Wallet className="w-4 h-4" /> هەڵگرتن
@@ -1031,12 +1043,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <button 
             key={i} 
             onClick={() => {
-              setNewTransaction(p => ({ 
-                ...p,
+              setNewTransaction({ 
+                ...initialTransactionState,
                 description: action.label, 
                 category: 'personal',
                 type: 'expense'
-              }));
+              });
               setShowTransactionModal(true);
             }}
             className="p-4 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2 group active:scale-95"
@@ -1445,7 +1457,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.milkQuantity ? <span className="text-[10px] font-black text-blue-500 uppercase bg-blue-50 px-1.5 py-0.5 rounded">{t.milkQuantity} لیتر شیر</span> : null}
                         {t.fuelLiters ? <span className="text-[10px] font-black text-red-500 uppercase bg-red-50 px-1.5 py-0.5 rounded">{t.fuelLiters} لیتر {t.fuelType}</span> : null}
                         {t.fuelPricePerLiter ? <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">نرخی لیتر: {t.fuelPricePerLiter.toLocaleString()}</span> : null}
-                        {t.maintenanceType && <span className="text-[10px] font-black text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded">{t.maintenanceType}</span>}
+                        {t.category === 'work' && t.maintenanceType && <span className="text-[10px] font-black text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded">{t.maintenanceType}</span>}
                         {t.workLocation && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">شوێن: {t.workLocation}</span>}
                         {t.shopName && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">ناوی شوێن: {t.shopName}</span>}
                         {t.itemsBought && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">پێداویستی: {t.itemsBought}</span>}
