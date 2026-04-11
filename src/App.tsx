@@ -637,7 +637,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     const personalExpense = personal.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     const personalIncome = personal.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-    const balance = personalIncome - personalExpense;
+    const personalSavings = personal.filter(t => t.type === 'savings').reduce((acc, t) => acc + t.amount, 0);
+    const balance = personalIncome - personalExpense - personalSavings;
     
     const pendingTasks = data.tasks.filter(t => !t.completed).length;
 
@@ -647,14 +648,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       const dateStr = format(day, 'yyyy-MM-dd');
       const dayPersonal = personal.filter(t => t.date === dateStr && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
       const dayIncome = personal.filter(t => t.date === dateStr && t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+      const daySavings = personal.filter(t => t.date === dateStr && t.type === 'savings').reduce((acc, t) => acc + t.amount, 0);
       return {
         name: format(day, 'EEE'),
         expense: dayPersonal,
-        income: dayIncome
+        income: dayIncome,
+        savings: daySavings
       };
     });
 
-    return { personalExpense, personalIncome, balance, pendingTasks, chartData };
+    return { personalExpense, personalIncome, personalSavings, balance, pendingTasks, chartData };
   }, [data]);
 
   // --- Handlers ---
@@ -939,22 +942,39 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
           <div className="relative z-10">
-            <p className="text-blue-100 font-medium mb-1">کۆی گشتی باڵانسی تۆ</p>
-            <h2 className="text-5xl font-black mb-6">
-              {stats.balance.toLocaleString()} <span className="text-2xl font-normal opacity-80">د.ع</span>
-            </h2>
-            <div className="flex gap-3">
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none" onClick={() => {
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-6">
+              <div>
+                <p className="text-blue-100 font-medium mb-1">کۆی گشتی باڵانس</p>
+                <h2 className="text-4xl sm:text-5xl font-black">
+                  {stats.balance.toLocaleString()} <span className="text-xl sm:text-2xl font-normal opacity-80">د.ع</span>
+                </h2>
+              </div>
+              <div className="hidden sm:block w-px h-12 bg-white/20" />
+              <div>
+                <p className="text-blue-100 font-medium mb-1">کۆی پاشەکەوت</p>
+                <h2 className="text-3xl sm:text-4xl font-black">
+                  {stats.personalSavings.toLocaleString()} <span className="text-lg sm:text-xl font-normal opacity-80">د.ع</span>
+                </h2>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
                 setNewTransaction(p => ({ ...p, type: 'income', category: 'personal' }));
                 setShowTransactionModal(true);
               }}>
-                <Plus className="w-4 h-4" /> زیادکردنی داهات
+                <Plus className="w-4 h-4" /> داهات
               </Button>
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none" onClick={() => {
+              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
                 setNewTransaction(p => ({ ...p, type: 'expense', category: 'personal' }));
                 setShowTransactionModal(true);
               }}>
-                <ArrowUpRight className="w-4 h-4" /> خەرجی نوێ
+                <ArrowUpRight className="w-4 h-4" /> خەرجی
+              </Button>
+              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
+                setNewTransaction(p => ({ ...p, type: 'savings', category: 'personal', description: 'پارە هەڵگرتن' }));
+                setShowTransactionModal(true);
+              }}>
+                <Wallet className="w-4 h-4" /> هەڵگرتن
               </Button>
             </div>
           </div>
@@ -979,10 +999,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 </defs>
                 <Area type="monotone" dataKey="expense" stroke="#f43f5e" fillOpacity={1} fill="url(#colorExpense)" />
                 <Area type="monotone" dataKey="income" stroke="#2563eb" fillOpacity={0.1} fill="#2563eb" />
+                <Area type="monotone" dataKey="savings" stroke="#f59e0b" fillOpacity={0.1} fill="#f59e0b" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-4 flex justify-between items-center">
+          <div className="mt-4 flex flex-wrap gap-4 justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
               <span className="text-xs font-bold text-slate-500">خەرجی</span>
@@ -990,6 +1011,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-blue-600" />
               <span className="text-xs font-bold text-slate-500">داهات</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <span className="text-xs font-bold text-slate-500">پاشەکەوت</span>
             </div>
           </div>
         </Card>
@@ -1256,6 +1281,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         if (financeFilter === 'market') return t.description === 'مارکێت';
         if (financeFilter === 'fuel') return t.description === 'بەنزین';
         if (financeFilter === 'income') return t.type === 'income';
+        if (financeFilter === 'savings') return t.type === 'savings';
       }
       return true;
     });
@@ -1281,6 +1307,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 { id: 'market', label: 'مارکێت' },
                 { id: 'fuel', label: 'بەنزین' },
                 { id: 'income', label: 'داهات' },
+                { id: 'savings', label: 'پاشەکەوت' },
               ] : [])
             ].map(f => (
               <button
@@ -1862,6 +1889,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl shrink-0">
                   <button onClick={() => setNewTransaction(p => ({ ...p, type: 'income' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'income' ? "bg-[var(--bg-card)] text-green-600 shadow-sm" : "text-slate-400")}>داهات</button>
                   <button onClick={() => setNewTransaction(p => ({ ...p, type: 'expense' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'expense' ? "bg-[var(--bg-card)] text-red-600 shadow-sm" : "text-slate-400")}>خەرجی</button>
+                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'savings' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'savings' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-slate-400")}>هەڵگرتن</button>
                 </div>
 
                 <div className="space-y-2">

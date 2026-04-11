@@ -18,7 +18,7 @@ export type Task = {
 
 export type Transaction = {
   id: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'savings';
   amount: number;
   category: 'work' | 'personal';
   description: string;
