@@ -2,7 +2,7 @@
   "entities": {
     "Task": {
       "title": "Task",
-      "description": "A task or job to be done",
+      "description": "A daily task or work item",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -26,15 +26,15 @@
         "userId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "title", "date", "completed", "userId"]
+      "required": ["id", "title", "date", "completed", "userId", "createdAt"]
     },
     "Transaction": {
       "title": "Transaction",
-      "description": "A financial transaction (income or expense)",
+      "description": "A financial transaction (income, expense, or savings)",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["income", "expense"] },
+        "type": { "type": "string", "enum": ["income", "expense", "savings"] },
         "amount": { "type": "number" },
         "category": { "type": "string", "enum": ["work", "personal"] },
         "description": { "type": "string" },
@@ -73,11 +73,11 @@
         "userId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "type", "amount", "category", "description", "date", "userId"]
+      "required": ["id", "type", "amount", "category", "description", "date", "userId", "createdAt"]
     },
-    "UserSettings": {
-      "title": "UserSettings",
-      "description": "User specific settings and metadata",
+    "Settings": {
+      "title": "Settings",
+      "description": "User preferences and history",
       "type": "object",
       "properties": {
         "descriptions": { "type": "array", "items": { "type": "string" } },
@@ -88,15 +88,15 @@
   "firestore": {
     "/users/{userId}/tasks/{taskId}": {
       "schema": "Task",
-      "description": "User tasks"
+      "description": "User's tasks"
     },
     "/users/{userId}/transactions/{transactionId}": {
       "schema": "Transaction",
-      "description": "User transactions"
+      "description": "User's transactions"
     },
     "/users/{userId}/settings/main": {
-      "schema": "UserSettings",
-      "description": "User settings"
+      "schema": "Settings",
+      "description": "User's settings"
     }
   }
 }

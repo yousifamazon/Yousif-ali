@@ -84,13 +84,23 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, doc, getDocs, getDoc } from 'firebase/firestore';
 
 // Polyfill for crypto.randomUUID if not available
-if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
+if (typeof crypto === 'undefined') {
+  // @ts-ignore
+  window.crypto = {
+    randomUUID: function() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      }) as any;
+    }
+  };
+} else if (!crypto.randomUUID) {
   // @ts-ignore
   crypto.randomUUID = function() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
-    });
+    }) as any;
   };
 }
 
@@ -311,6 +321,7 @@ export default function App() {
   const [data, setData] = useState<AppData>(getStoredData());
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [searchQuery, setSearchQuery] = useState('');
@@ -582,17 +593,21 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         // Migrate tasks if cloud is empty but local is not
         if (tasksSnap.empty && data.tasks.length > 0) {
           console.log("Migrating local tasks to Firebase...");
+          setIsMigrating(true);
           for (const task of data.tasks) {
             await syncTaskToFirebase(task);
           }
+          setIsMigrating(false);
         }
 
         // Migrate transactions if cloud is empty but local is not
         if (transSnap.empty && data.transactions.length > 0) {
           console.log("Migrating local transactions to Firebase...");
+          setIsMigrating(true);
           for (const trans of data.transactions) {
             await syncTransactionToFirebase(trans);
           }
+          setIsMigrating(false);
         }
 
         // Migrate settings if cloud is empty
@@ -611,12 +626,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     const tasksQuery = query(collection(db, `users/${user.uid}/tasks`), orderBy('date', 'desc'));
     const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
       const tasks = snapshot.docs.map(doc => doc.data() as Task);
       setData(prev => ({ ...prev, tasks }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/tasks`));
 
     const transQuery = query(collection(db, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
     const unsubTrans = onSnapshot(transQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
       const transactions = snapshot.docs.map(doc => doc.data() as Transaction);
       setData(prev => ({ ...prev, transactions }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/transactions`));
