@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useMemo, Component } from 'react';
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -82,7 +83,64 @@ import {
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, doc } from 'firebase/firestore';
 
+// Polyfill for crypto.randomUUID if not available
+if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
+  // @ts-ignore
+  crypto.randomUUID = function() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+}
+
 // --- Components ---
+
+export class ErrorBoundary extends React.Component<any, any> {
+  public state: any;
+  public props: any;
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-red-100">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-800 mb-4">هەڵەیەک ڕوویدا</h1>
+            <p className="text-slate-600 font-bold mb-6">ببورە، بەرنامەکە تووشی کێشەیەک بوو لە کاتی کارکردن.</p>
+            <div className="bg-red-50 p-4 rounded-2xl text-left mb-6 overflow-auto max-h-40">
+              <code className="text-xs text-red-700 font-mono whitespace-pre-wrap">
+                {this.state.error?.message}
+              </code>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-colors"
+            >
+              دووبارە بارکردنەوە
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void; key?: string | number }) => (
   <motion.div 

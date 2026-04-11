@@ -25,7 +25,12 @@ export const getStoredData = (): AppData => {
     'بەنزین', 'دکتۆر', 'مارکێت', 'جگەرە', 'میوە', 'چاکردنەوەی سەیارە', 'کارەبا', 'کرێ', 'هێنانەوەی شیر'
   ];
   const defaultData: AppData = { tasks: [], transactions: [], descriptions: defaultDescriptions, history: {} };
-  const data = localStorage.getItem(STORAGE_KEY);
+  let data = null;
+  try {
+    data = localStorage.getItem(STORAGE_KEY);
+  } catch (e) {
+    console.error("LocalStorage access denied", e);
+  }
   if (data) {
     try {
       const parsed = JSON.parse(data);
