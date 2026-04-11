@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# رۆژانەی یوسف (Yousif's Daily)
 
-# Run and deploy your AI Studio app
+سیستەمێکی بەڕێوەبردنی کاروباری رۆژانە و خەرجییەکان.
 
-This contains everything you need to run your app locally.
+## تایبەتمەندییەکان
+- بەڕێوەبردنی ئیشەکان (Tasks)
+- تۆمارکردنی خەرجی و داهاتی تایبەت
+- ئاماری دارایی و چارت
+- خەزنکردنی داتا لەسەر Firebase
+- چوونەژوورەوە بە Google Account
+- هەناردەکردنی داتا بۆ Excel و PDF
 
-View your app in AI Studio: https://ai.studio/apps/84407cc7-c154-4a3f-8c56-c797dd8a998a
+## چۆنیەتی دامەزراندن
 
-## Run Locally
+١. سەرەتا پڕۆژەکە داونلۆد بکە یان `git clone` بکە.
+٢. فۆڵدەرەکە بکەرەوە لە ناو تێرمیناڵ.
+٣. فەرمانی `npm install` لێبدە بۆ دابەزاندنی پاکێجەکان.
+٤. فەرمانی `npm run dev` لێبدە بۆ کارپێکردنی پڕۆژەکە.
 
-**Prerequisites:**  Node.js
+## ڕێکخستنی Firebase
 
+بۆ ئەوەی پڕۆژەکە کار بکات، پێویستە فایلی `firebase-applet-config.json` پڕ بکەیتەوە بە زانیارییەکانی پڕۆژەی خۆت لە Firebase Console.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## تەکنەلۆژیاکانی بەکارهاتوو
+- React + Vite
+- TypeScript
+- Tailwind CSS
+- Firebase (Auth & Firestore)
+- Framer Motion (Animations)
+- Recharts (Charts)
