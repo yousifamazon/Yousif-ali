@@ -69,7 +69,8 @@ import {
   deleteTaskFromFirebase,
   syncTransactionToFirebase,
   deleteTransactionFromFirebase,
-  syncSettingsToFirebase
+  syncSettingsToFirebase,
+  resetFirebaseData
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { 
@@ -969,7 +970,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     window.print();
   };
 
-  const resetAllData = () => {
+  const resetAllData = async () => {
+    if (user) {
+      try {
+        await resetFirebaseData();
+      } catch (err: any) {
+        console.error("Failed to reset Firebase data:", err);
+        alert(parseFirestoreError(err));
+        return; // Don't clear local if server fails? Or maybe clear anyway?
+      }
+    }
     clearStorage();
     setData(getStoredData());
     setShowResetModal(false);

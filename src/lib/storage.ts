@@ -143,3 +143,25 @@ export const syncSettingsToFirebase = async (descriptions: string[], history: an
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 };
+
+export const resetFirebaseData = async () => {
+  if (!auth.currentUser) return;
+  const uid = auth.currentUser.uid;
+  
+  try {
+    // Delete tasks
+    const tasksSnapshot = await getDocs(collection(db, `users/${uid}/tasks`));
+    const taskDeletions = tasksSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    
+    // Delete transactions
+    const transSnapshot = await getDocs(collection(db, `users/${uid}/transactions`));
+    const transDeletions = transSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    
+    // Delete settings
+    const settingsRef = doc(db, `users/${uid}/settings/main`);
+    
+    await Promise.all([...taskDeletions, ...transDeletions, deleteDoc(settingsRef)]);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
+  }
+};
