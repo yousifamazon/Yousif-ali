@@ -121,6 +121,7 @@ service cloud.firestore {
       return data.id is string &&
              data.title is string && data.title.size() >= 1 && data.title.size() <= 500 &&
              data.completed is bool &&
+             (!('type' in data) || data.type in ['general', 'private']) &&
              data.userId == request.auth.uid &&
              data.createdAt is string && isValidDateTime(data.createdAt);
     }

@@ -56,6 +56,7 @@ export type WishlistItem = {
   estimatedPrice?: number;
   createdAt: string;
   completed: boolean;
+  type?: 'general' | 'private';
 };
 
 export type AppData = {

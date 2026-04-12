@@ -578,8 +578,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     title: '',
     notes: '',
     estimatedPrice: 0,
-    completed: false
+    completed: false,
+    type: 'general'
   };
+
+  const [activeWishlistTab, setActiveWishlistTab] = useState<'general' | 'private'>('general');
 
   const [newTask, setNewTask] = useState<Partial<Task>>(initialTaskState);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>(() => {
@@ -1056,7 +1059,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       title: newWishlistItem.title,
       notes: newWishlistItem.notes || '',
       estimatedPrice: Number(newWishlistItem.estimatedPrice) || 0,
-      completed: newWishlistItem.completed || false
+      completed: newWishlistItem.completed || false,
+      type: newWishlistItem.type || activeWishlistTab
     };
 
     if (editingWishlistId) {
@@ -1147,7 +1151,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   // --- Render Sections ---
 
   const renderWishlist = () => {
-    const totalEstimatedPrice = (data.wishlist || [])
+    const filteredItems = (data.wishlist || []).filter(item => (item.type || 'general') === activeWishlistTab);
+    const totalEstimatedPrice = filteredItems
       .filter(item => !item.completed)
       .reduce((acc, item) => acc + (item.estimatedPrice || 0), 0);
 
@@ -1159,11 +1164,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </h2>
           <Button onClick={() => {
             setEditingWishlistId(null);
-            setNewWishlistItem(initialWishlistState);
+            setNewWishlistItem({ ...initialWishlistState, type: activeWishlistTab });
             setShowWishlistModal(true);
           }} className="rounded-2xl px-6">
             <Plus className="w-5 h-5 ml-2" /> زیادکردن
           </Button>
+        </div>
+
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
+          <button onClick={() => setActiveWishlistTab('general')} className={cn("flex-1 py-3 rounded-xl font-black transition-all", activeWishlistTab === 'general' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-slate-400")}>گشتی</button>
+          <button onClick={() => setActiveWishlistTab('private')} className={cn("flex-1 py-3 rounded-xl font-black transition-all", activeWishlistTab === 'private' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-slate-400")}>تایبەتی</button>
         </div>
 
         {totalEstimatedPrice > 0 && (
@@ -1176,13 +1186,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         )}
 
         <div className="space-y-4">
-          {(data.wishlist || []).length === 0 ? (
+          {filteredItems.length === 0 ? (
           <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
             <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium text-lg">هیچ پێداویستییەک نییە لە لیستەکەدا</p>
+            <p className="text-slate-500 font-medium text-lg">هیچ پێداویستییەک نییە لەم لیستەدا</p>
           </div>
         ) : (
-          (data.wishlist || []).map(item => (
+          filteredItems.map(item => (
             <Card key={item.id} className={cn("transition-all", item.completed && "opacity-60 bg-slate-50")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4 flex-1">
