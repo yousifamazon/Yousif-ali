@@ -126,6 +126,25 @@ service cloud.firestore {
              data.createdAt is string && isValidDateTime(data.createdAt);
     }
 
+    function isValidDebt(data) {
+      return data.id is string &&
+             data.personName is string && data.personName.size() >= 1 && data.personName.size() <= 200 &&
+             data.amount is number && data.amount > 0 &&
+             data.type in ['owed', 'owing'] &&
+             data.date is string && isValidDate(data.date) &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string && isValidDateTime(data.createdAt);
+    }
+
+    function isValidSavingsGoal(data) {
+      return data.id is string &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 500 &&
+             data.targetAmount is number && data.targetAmount > 0 &&
+             data.currentAmount is number && data.currentAmount >= 0 &&
+             data.createdAt is string && isValidDateTime(data.createdAt) &&
+             data.userId == request.auth.uid;
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -157,6 +176,26 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidWishlistItem(request.resource.data);
         allow update: if isOwner(userId) && isValidWishlistItem(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /debts/{debtId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDebt(request.resource.data);
+        allow update: if isOwner(userId) && isValidDebt(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /savingsGoals/{goalId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidSavingsGoal(request.resource.data);
+        allow update: if isOwner(userId) && isValidSavingsGoal(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
                          request.resource.data.createdAt == resource.data.createdAt;

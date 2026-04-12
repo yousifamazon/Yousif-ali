@@ -49,6 +49,26 @@ export type Transaction = {
   savingsEffect?: 'add' | 'subtract' | 'none';
 };
 
+export type Debt = {
+  id: string;
+  personName: string;
+  amount: number;
+  type: 'owed' | 'owing'; // 'owed' = I owe them, 'owing' = they owe me
+  date: string;
+  notes?: string;
+  completed: boolean;
+};
+
+export type SavingsGoal = {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string;
+  notes?: string;
+  createdAt: string;
+};
+
 export type WishlistItem = {
   id: string;
   title: string;
@@ -63,6 +83,8 @@ export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
   wishlist?: WishlistItem[];
+  debts?: Debt[];
+  savingsGoals?: SavingsGoal[];
   descriptions: string[];
   history?: Record<string, string[]>;
 };

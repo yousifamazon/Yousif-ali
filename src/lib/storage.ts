@@ -174,6 +174,66 @@ export const deleteWishlistFromFirebase = async (id: string) => {
   }
 };
 
+export const syncDebtToFirebase = async (debt: any) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/debts/${debt.id}`;
+  try {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (debt.date + 'T00:00:00Z');
+    
+    const dataToSync = removeUndefined({
+      ...debt,
+      userId: auth.currentUser.uid,
+      createdAt: createdAt
+    });
+
+    await setDoc(docRef, dataToSync);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const deleteDebtFromFirebase = async (id: string) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/debts/${id}`;
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const syncSavingsGoalToFirebase = async (goal: any) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/savingsGoals/${goal.id}`;
+  try {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (goal.createdAt || new Date().toISOString());
+    
+    const dataToSync = removeUndefined({
+      ...goal,
+      userId: auth.currentUser.uid,
+      createdAt: createdAt
+    });
+
+    await setDoc(docRef, dataToSync);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const deleteSavingsGoalFromFirebase = async (id: string) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/savingsGoals/${id}`;
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
 export const resetFirebaseData = async () => {
   if (!auth.currentUser) return;
   const uid = auth.currentUser.uid;
@@ -191,10 +251,18 @@ export const resetFirebaseData = async () => {
     const wishlistSnapshot = await getDocs(collection(db, `users/${uid}/wishlist`));
     const wishlistDeletions = wishlistSnapshot.docs.map(doc => deleteDoc(doc.ref));
 
+    // Delete debts
+    const debtsSnapshot = await getDocs(collection(db, `users/${uid}/debts`));
+    const debtsDeletions = debtsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+
+    // Delete savingsGoals
+    const savingsSnapshot = await getDocs(collection(db, `users/${uid}/savingsGoals`));
+    const savingsDeletions = savingsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+
     // Delete settings
     const settingsRef = doc(db, `users/${uid}/settings/main`);
     
-    await Promise.all([...taskDeletions, ...transDeletions, ...wishlistDeletions, deleteDoc(settingsRef)]);
+    await Promise.all([...taskDeletions, ...transDeletions, ...wishlistDeletions, ...debtsDeletions, ...savingsDeletions, deleteDoc(settingsRef)]);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
   }

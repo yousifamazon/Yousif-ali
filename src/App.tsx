@@ -36,6 +36,8 @@ import {
   Moon, 
   Sun, 
   Bell,
+  UserMinus,
+  PiggyBank,
   Camera,
   Image as ImageIcon,
   Share2,
@@ -343,7 +345,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'wishlist'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'wishlist' | 'debts' | 'savings'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -358,10 +360,14 @@ export default function App() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
+  const [showDebtModal, setShowDebtModal] = useState(false);
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingWishlistId, setEditingWishlistId] = useState<string | null>(null);
+  const [editingDebtId, setEditingDebtId] = useState<string | null>(null);
+  const [editingSavingsId, setEditingSavingsId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState<{ index: number; value: string } | null>(null);
   const [financeFilter, setFinanceFilter] = useState<'all' | 'market' | 'fuel' | 'income' | 'driver'>('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -583,6 +589,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const [activeWishlistTab, setActiveWishlistTab] = useState<'general' | 'private'>('general');
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
 
   const [newTask, setNewTask] = useState<Partial<Task>>(initialTaskState);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>(() => {
@@ -590,6 +598,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     return saved ? JSON.parse(saved) : initialTransactionState;
   });
   const [newWishlistItem, setNewWishlistItem] = useState<Partial<WishlistItem>>(initialWishlistState);
+  const [newDebt, setNewDebt] = useState<Partial<Debt>>({ type: 'owed', amount: 0 });
+  const [newSavings, setNewSavings] = useState<Partial<SavingsGoal>>({ targetAmount: 0, currentAmount: 0 });
 
   // Persist pending transaction and modal state
   useEffect(() => {
@@ -702,11 +712,29 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       setData(prev => ({ ...prev, wishlist }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/wishlist`));
 
+    const debtsQuery = query(collection(db, `users/${user.uid}/debts`), orderBy('date', 'desc'));
+    const unsubDebts = onSnapshot(debtsQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
+      const debts = snapshot.docs.map(doc => doc.data() as Debt);
+      setData(prev => ({ ...prev, debts }));
+      setDebts(debts);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/debts`));
+
+    const savingsQuery = query(collection(db, `users/${user.uid}/savingsGoals`), orderBy('createdAt', 'desc'));
+    const unsubSavings = onSnapshot(savingsQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
+      const savingsGoals = snapshot.docs.map(doc => doc.data() as SavingsGoal);
+      setData(prev => ({ ...prev, savingsGoals }));
+      setSavingsGoals(savingsGoals);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/savingsGoals`));
+
     return () => {
       unsubTasks();
       unsubTrans();
       unsubSettings();
       unsubWishlist();
+      unsubDebts();
+      unsubSavings();
     };
   }, [user]);
 
@@ -1052,6 +1080,37 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     }
   };
 
+  const addDebt = async () => {
+    if (!newDebt.personName || !newDebt.amount) return;
+    const debtData = {
+      id: editingDebtId || crypto.randomUUID(),
+      personName: newDebt.personName,
+      amount: newDebt.amount,
+      type: newDebt.type || 'owed',
+      date: newDebt.date || new Date().toISOString().split('T')[0],
+      notes: newDebt.notes || '',
+      completed: newDebt.completed || false,
+      userId: user?.uid
+    };
+    await syncDebtToFirebase(debtData);
+    setShowDebtModal(false);
+    setNewDebt({ type: 'owed', amount: 0 });
+  };
+
+  const addSavingsGoal = async () => {
+    if (!newSavings.title || !newSavings.targetAmount) return;
+    const goalData = {
+      id: editingSavingsId || crypto.randomUUID(),
+      title: newSavings.title,
+      targetAmount: newSavings.targetAmount,
+      currentAmount: newSavings.currentAmount || 0,
+      createdAt: newSavings.createdAt || new Date().toISOString(),
+      userId: user?.uid
+    };
+    await syncSavingsGoalToFirebase(goalData);
+    setShowSavingsModal(false);
+    setNewSavings({ targetAmount: 0, currentAmount: 0 });
+  };
   const addWishlistItem = async () => {
     if (!newWishlistItem.title) return;
 
@@ -1150,88 +1209,110 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
   // --- Render Sections ---
 
-  const renderWishlist = () => {
-    const filteredItems = (data.wishlist || []).filter(item => (item.type || 'general') === activeWishlistTab);
-    const totalEstimatedPrice = filteredItems
-      .filter(item => !item.completed)
-      .reduce((acc, item) => acc + (item.estimatedPrice || 0), 0);
+  const renderDebts = () => {
+    const totalOwed = (data.debts || []).filter(d => d.type === 'owed' && !d.completed).reduce((acc, d) => acc + d.amount, 0);
+    const totalOwing = (data.debts || []).filter(d => d.type === 'owing' && !d.completed).reduce((acc, d) => acc + d.amount, 0);
 
     return (
       <div className="space-y-6 pb-24">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
-            <ShoppingCart className="w-7 h-7 text-blue-600" /> پێداویستییەکان
+            <UserMinus className="w-7 h-7 text-red-600" /> قەرزەکان
           </h2>
           <Button onClick={() => {
-            setEditingWishlistId(null);
-            setNewWishlistItem({ ...initialWishlistState, type: activeWishlistTab });
-            setShowWishlistModal(true);
+            setEditingDebtId(null);
+            setShowDebtModal(true);
           }} className="rounded-2xl px-6">
             <Plus className="w-5 h-5 ml-2" /> زیادکردن
           </Button>
         </div>
 
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
-          <button onClick={() => setActiveWishlistTab('general')} className={cn("flex-1 py-3 rounded-xl font-black transition-all", activeWishlistTab === 'general' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-slate-400")}>گشتی</button>
-          <button onClick={() => setActiveWishlistTab('private')} className={cn("flex-1 py-3 rounded-xl font-black transition-all", activeWishlistTab === 'private' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-slate-400")}>تایبەتی</button>
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="p-4 bg-red-50 border-red-100">
+            <p className="text-sm font-bold text-red-800">قەرزارم:</p>
+            <p className="text-xl font-black text-red-600">{totalOwed.toLocaleString()} د.ع</p>
+          </Card>
+          <Card className="p-4 bg-green-50 border-green-100">
+            <p className="text-sm font-bold text-green-800">قەرزم لایە:</p>
+            <p className="text-xl font-black text-green-600">{totalOwing.toLocaleString()} د.ع</p>
+          </Card>
         </div>
 
-        {totalEstimatedPrice > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-2xl flex justify-between items-center">
-            <span className="font-bold text-blue-800 dark:text-blue-300">کۆی گشتی پێویست:</span>
-            <span className="text-xl font-black text-blue-600 dark:text-blue-400">
-              {totalEstimatedPrice.toLocaleString()} <span className="text-sm font-normal">دینار</span>
-            </span>
-          </div>
-        )}
-
         <div className="space-y-4">
-          {filteredItems.length === 0 ? (
-          <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
-            <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium text-lg">هیچ پێداویستییەک نییە لەم لیستەدا</p>
-          </div>
-        ) : (
-          filteredItems.map(item => (
-            <Card key={item.id} className={cn("transition-all", item.completed && "opacity-60 bg-slate-50")}>
+          {(data.debts || []).map(debt => (
+            <Card key={debt.id} className={cn("transition-all", debt.completed && "opacity-60 bg-slate-50")}>
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4 flex-1">
-                  <button 
-                    onClick={() => toggleWishlistItem(item.id)}
-                    className={cn(
-                      "mt-1 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors",
-                      item.completed ? "bg-green-500 border-green-500 text-white" : "border-slate-300 text-transparent hover:border-green-500"
-                    )}
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                  <div className="flex-1">
-                    <h4 className={cn("font-bold text-lg", item.completed && "line-through text-slate-500")}>{item.title}</h4>
-                    {item.notes && <p className="text-sm text-slate-500 mt-1">{item.notes}</p>}
-                    {item.estimatedPrice ? (
-                      <p className="text-sm font-bold text-blue-600 mt-2">{item.estimatedPrice.toLocaleString()} د.ع</p>
-                    ) : null}
-                  </div>
+                <div className="flex-1">
+                  <h4 className={cn("font-bold text-lg", debt.completed && "line-through text-slate-500")}>{debt.personName}</h4>
+                  <p className="text-sm text-slate-500">{debt.notes}</p>
+                  <p className={cn("text-lg font-black mt-1", debt.type === 'owed' ? 'text-red-600' : 'text-green-600')}>{debt.amount.toLocaleString()} د.ع</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => {
-                    setEditingWishlistId(item.id);
-                    setNewWishlistItem(item);
-                    setShowWishlistModal(true);
+                    setEditingDebtId(debt.id);
+                    setShowDebtModal(true);
                   }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => deleteItem(item.id, 'wishlist')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                  <button onClick={() => deleteItem(debt.id, 'debts')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </Card>
-          ))
-        )}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const renderSavings = () => {
+    return (
+      <div className="space-y-6 pb-24">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+            <PiggyBank className="w-7 h-7 text-yellow-600" /> پاشەکەوت
+          </h2>
+          <Button onClick={() => {
+            setEditingSavingsId(null);
+            setShowSavingsModal(true);
+          }} className="rounded-2xl px-6">
+            <Plus className="w-5 h-5 ml-2" /> زیادکردن
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {(data.savingsGoals || []).map(goal => {
+            const progress = (goal.currentAmount / goal.targetAmount) * 100;
+            return (
+              <Card key={goal.id} className="p-6 space-y-4">
+                <div className="flex justify-between items-start">
+                  <h4 className="font-bold text-xl">{goal.title}</h4>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => {
+                      setEditingSavingsId(goal.id);
+                      setShowSavingsModal(true);
+                    }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => deleteItem(goal.id, 'savingsGoals')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+                  <div className={cn("h-full transition-all duration-500", progress >= 100 ? "bg-green-500" : "bg-red-500")} style={{ width: `${Math.min(progress, 100)}%` }} />
+                </div>
+                <div className="flex justify-between text-sm font-bold">
+                  <span>{goal.currentAmount.toLocaleString()} د.ع</span>
+                  <span>{goal.targetAmount.toLocaleString()} د.ع</span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const renderDashboard = () => (
@@ -1951,6 +2032,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'tasks' && renderTasks()}
               {activeTab === 'personal' && renderFinance('personal')}
               {activeTab === 'wishlist' && renderWishlist()}
+              {activeTab === 'debts' && renderDebts()}
+              {activeTab === 'savings' && renderSavings()}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -1962,6 +2045,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             { id: 'tasks', icon: CheckSquare, label: 'ئیشەکان' },
             { id: 'personal', icon: User, label: 'تایبەت' },
             { id: 'wishlist', icon: ShoppingCart, label: 'پێداویستی' },
+            { id: 'debts', icon: UserMinus, label: 'قەرز' },
+            { id: 'savings', icon: PiggyBank, label: 'پاشەکەوت' },
           ].map(tab => (
             <button
               key={tab.id}
