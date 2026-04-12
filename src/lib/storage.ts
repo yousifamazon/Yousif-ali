@@ -54,18 +54,22 @@ export const clearStorage = () => {
   localStorage.removeItem(STORAGE_KEY);
 };
 
-const removeUndefined = (obj: any) => {
-  const newObj: any = {};
-  Object.keys(obj).forEach(key => {
-    if (obj[key] !== undefined) {
-      if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+const removeUndefined = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj
+      .filter(item => item !== undefined)
+      .map(item => removeUndefined(item));
+  }
+  if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+    const newObj: any = {};
+    Object.keys(obj).forEach(key => {
+      if (obj[key] !== undefined) {
         newObj[key] = removeUndefined(obj[key]);
-      } else {
-        newObj[key] = obj[key];
       }
-    }
-  });
-  return newObj;
+    });
+    return newObj;
+  }
+  return obj;
 };
 
 // --- Firebase Sync Helpers ---

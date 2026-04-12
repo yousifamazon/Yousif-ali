@@ -147,10 +147,28 @@ export class ErrorBoundary extends React.Component<any, any> {
         </div>
       );
     }
-
     return this.props.children;
   }
 }
+
+const parseFirestoreError = (err: any): string => {
+  let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
+  try {
+    const errInfo = JSON.parse(err.message);
+    if (errInfo.error.includes('permission-denied')) {
+      errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
+    } else if (errInfo.error.includes('auth/unauthorized-domain')) {
+      errorMessage = 'ئەم سایتە ڕێگەی پێنەدراوە بۆ داخڵبوون. تکایە لە ڕێگەی سایتی سەرەکییەوە هەوڵ بدەرەوە.';
+    } else if (errInfo.error.includes('quota-exceeded')) {
+      errorMessage = 'کۆتای پاشەکەوتکردن تەواو بووە. تکایە سبەی هەوڵ بدەرەوە.';
+    }
+  } catch (e) {}
+
+  if (errorMessage === 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا' && err.message) {
+    errorMessage += '\n\nوردەکاری: ' + err.message.substring(0, 150);
+  }
+  return errorMessage;
+};
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void; key?: string | number }) => (
   <motion.div 
@@ -743,14 +761,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           await syncTaskToFirebase(updatedTask);
         } catch (err: any) {
           console.error("Failed to sync task (edit):", err);
-          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
-          try {
-            const errInfo = JSON.parse(err.message);
-            if (errInfo.error.includes('permission-denied')) {
-              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
-            }
-          } catch (e) {}
-          alert(errorMessage);
+          alert(parseFirestoreError(err));
         }
       }
     } else {
@@ -768,14 +779,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           await syncTaskToFirebase(task);
         } catch (err: any) {
           console.error("Failed to sync task (new):", err);
-          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
-          try {
-            const errInfo = JSON.parse(err.message);
-            if (errInfo.error.includes('permission-denied')) {
-              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
-            }
-          } catch (e) {}
-          alert(errorMessage);
+          alert(parseFirestoreError(err));
         }
       }
     }
@@ -857,14 +861,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           await syncTransactionToFirebase(updatedTransaction);
         } catch (err: any) {
           console.error("Failed to sync transaction (edit):", err);
-          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
-          try {
-            const errInfo = JSON.parse(err.message);
-            if (errInfo.error.includes('permission-denied')) {
-              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
-            }
-          } catch (e) {}
-          alert(errorMessage);
+          alert(parseFirestoreError(err));
         }
       }
     } else {
@@ -881,14 +878,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           await syncTransactionToFirebase(transaction);
         } catch (err: any) {
           console.error("Failed to sync transaction (new):", err);
-          let errorMessage = 'کێشەیەک لە پاشەکەوتکردن لە سێرڤەر ڕوویدا';
-          try {
-            const errInfo = JSON.parse(err.message);
-            if (errInfo.error.includes('permission-denied')) {
-              errorMessage = 'دەسەڵاتی پاشەکەوتکردنت نییە. تکایە دڵنیابەرەوە کە داخڵ بوویت.';
-            }
-          } catch (e) {}
-          alert(errorMessage);
+          alert(parseFirestoreError(err));
         }
       }
     }
