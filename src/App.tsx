@@ -559,7 +559,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     customerName: '',
     invoiceNumber: '',
     receiptImage: '',
-    isDelivery: false
+    isDelivery: false,
+    savingsEffect: 'none'
   };
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -740,7 +741,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const personalExpense = personal.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     const personalIncome = personal.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
     const personalSavings = personal.filter(t => t.type === 'savings').reduce((acc, t) => acc + t.amount, 0);
-    const balance = personalIncome - personalExpense;
+    
+    let balance = personalIncome - personalExpense;
+    personal.filter(t => t.type === 'savings').forEach(t => {
+      if (t.savingsEffect === 'add') {
+        balance += t.amount;
+      } else if (t.savingsEffect === 'subtract') {
+        balance -= t.amount;
+      }
+    });
     
     const pendingTasks = data.tasks.filter(t => !t.completed).length;
 
@@ -851,7 +860,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       paymentMethod: newTransaction.paymentMethod || 'cash',
       receiptItems: newTransaction.receiptItems,
       receiptImage: newTransaction.receiptImage,
-      isDelivery: newTransaction.isDelivery
+      isDelivery: newTransaction.isDelivery,
+      savingsEffect: newTransaction.savingsEffect || 'none'
     };
 
     // Only add work-specific fields if it's a work transaction
@@ -2199,6 +2209,32 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <p className="text-center text-[10px] font-bold text-blue-600 mt-1">کۆی گشتی بەپێی لیتر و نرخ حیساب دەکرێت</p>
                   )}
                 </div>
+
+                {newTransaction.type === 'savings' && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-black text-slate-500 mr-1">کاریگەری لەسەر کۆی گشتی باڵانس</label>
+                    <div className="flex bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl">
+                      <button 
+                        onClick={() => setNewTransaction(p => ({ ...p, savingsEffect: 'none' }))} 
+                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", (newTransaction.savingsEffect === 'none' || !newTransaction.savingsEffect) ? "bg-[var(--bg-card)] text-slate-800 shadow-sm" : "text-slate-400")}
+                      >
+                        بێ کاریگەر
+                      </button>
+                      <button 
+                        onClick={() => setNewTransaction(p => ({ ...p, savingsEffect: 'subtract' }))} 
+                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", newTransaction.savingsEffect === 'subtract' ? "bg-[var(--bg-card)] text-red-600 shadow-sm" : "text-slate-400")}
+                      >
+                        کەمکردن
+                      </button>
+                      <button 
+                        onClick={() => setNewTransaction(p => ({ ...p, savingsEffect: 'add' }))} 
+                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", newTransaction.savingsEffect === 'add' ? "bg-[var(--bg-card)] text-green-600 shadow-sm" : "text-slate-400")}
+                      >
+                        زیادکردن
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Specific Fields for Delivery/Driver */}
                 {newTransaction.description === 'سایەقی' && (

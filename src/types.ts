@@ -46,6 +46,7 @@ export type Transaction = {
   paidAmount?: number;
   remainingAmount?: number;
   debtAmount?: number;
+  savingsEffect?: 'add' | 'subtract' | 'none';
 };
 
 export type WishlistItem = {
