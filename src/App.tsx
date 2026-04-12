@@ -1146,23 +1146,37 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
   // --- Render Sections ---
 
-  const renderWishlist = () => (
-    <div className="space-y-6 pb-24">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-          <ShoppingCart className="w-7 h-7 text-blue-600" /> پێداویستییەکان
-        </h2>
-        <Button onClick={() => {
-          setEditingWishlistId(null);
-          setNewWishlistItem(initialWishlistState);
-          setShowWishlistModal(true);
-        }} className="rounded-2xl px-6">
-          <Plus className="w-5 h-5 ml-2" /> زیادکردن
-        </Button>
-      </div>
+  const renderWishlist = () => {
+    const totalEstimatedPrice = (data.wishlist || [])
+      .filter(item => !item.completed)
+      .reduce((acc, item) => acc + (item.estimatedPrice || 0), 0);
 
-      <div className="space-y-4">
-        {(data.wishlist || []).length === 0 ? (
+    return (
+      <div className="space-y-6 pb-24">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+            <ShoppingCart className="w-7 h-7 text-blue-600" /> پێداویستییەکان
+          </h2>
+          <Button onClick={() => {
+            setEditingWishlistId(null);
+            setNewWishlistItem(initialWishlistState);
+            setShowWishlistModal(true);
+          }} className="rounded-2xl px-6">
+            <Plus className="w-5 h-5 ml-2" /> زیادکردن
+          </Button>
+        </div>
+
+        {totalEstimatedPrice > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-2xl flex justify-between items-center">
+            <span className="font-bold text-blue-800 dark:text-blue-300">کۆی گشتی پێویست:</span>
+            <span className="text-xl font-black text-blue-600 dark:text-blue-400">
+              {totalEstimatedPrice.toLocaleString()} <span className="text-sm font-normal">دینار</span>
+            </span>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {(data.wishlist || []).length === 0 ? (
           <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
             <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500 font-medium text-lg">هیچ پێداویستییەک نییە لە لیستەکەدا</p>
@@ -1208,6 +1222,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       </div>
     </div>
   );
+  };
 
   const renderDashboard = () => (
     <div className="space-y-8 pb-12">

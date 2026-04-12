@@ -117,6 +117,14 @@ service cloud.firestore {
              data.createdAt is string && isValidDateTime(data.createdAt);
     }
 
+    function isValidWishlistItem(data) {
+      return data.id is string &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 500 &&
+             data.completed is bool &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string && isValidDateTime(data.createdAt);
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -138,6 +146,16 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidTransaction(request.resource.data);
         allow update: if isOwner(userId) && isValidTransaction(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /wishlist/{wishlistItemId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidWishlistItem(request.resource.data);
+        allow update: if isOwner(userId) && isValidWishlistItem(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
                          request.resource.data.createdAt == resource.data.createdAt;
