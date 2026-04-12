@@ -531,7 +531,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     workLocation: '',
     shopName: '',
     itemsBought: '',
-    maintenanceType: undefined,
     receiptItems: [{ name: '', price: 0 }],
     driverName: '',
     customerName: '',
@@ -719,7 +718,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     
     const taskData = {
       title: newTask.title || '',
-      description: newTask.description,
+      description: newTask.description || '',
       details: newTask.details || [],
       date: newTask.date || format(new Date(), 'yyyy-MM-dd'),
       category: newTask.category || 'personal',
@@ -811,7 +810,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       date: newTransaction.date || format(new Date(), 'yyyy-MM-dd'),
       type: newTransaction.type || 'expense',
       category: newTransaction.category || 'personal',
-      subCategory: newTransaction.subCategory,
+      subCategory: newTransaction.subCategory || '',
       paymentMethod: newTransaction.paymentMethod || 'cash',
       receiptItems: newTransaction.receiptItems,
       receiptImage: newTransaction.receiptImage,

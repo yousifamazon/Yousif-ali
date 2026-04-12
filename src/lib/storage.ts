@@ -54,6 +54,20 @@ export const clearStorage = () => {
   localStorage.removeItem(STORAGE_KEY);
 };
 
+const removeUndefined = (obj: any) => {
+  const newObj: any = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        newObj[key] = removeUndefined(obj[key]);
+      } else {
+        newObj[key] = obj[key];
+      }
+    }
+  });
+  return newObj;
+};
+
 // --- Firebase Sync Helpers ---
 
 export const syncTaskToFirebase = async (task: Task) => {
@@ -64,11 +78,13 @@ export const syncTaskToFirebase = async (task: Task) => {
     const existingDoc = await getDoc(docRef);
     const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (task.date + 'T00:00:00Z');
     
-    await setDoc(docRef, {
+    const dataToSync = removeUndefined({
       ...task,
       userId: auth.currentUser.uid,
       createdAt: createdAt
     });
+
+    await setDoc(docRef, dataToSync);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -92,11 +108,13 @@ export const syncTransactionToFirebase = async (transaction: Transaction) => {
     const existingDoc = await getDoc(docRef);
     const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (transaction.date + 'T00:00:00Z');
 
-    await setDoc(docRef, {
+    const dataToSync = removeUndefined({
       ...transaction,
       userId: auth.currentUser.uid,
       createdAt: createdAt
     });
+
+    await setDoc(docRef, dataToSync);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
