@@ -60,7 +60,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Task, Transaction, AppData } from './types';
+import { Task, Transaction, AppData, WishlistItem } from './types';
 import { 
   getStoredData, 
   saveToStorage, 
@@ -70,7 +70,9 @@ import {
   syncTransactionToFirebase,
   deleteTransactionFromFirebase,
   syncSettingsToFirebase,
-  resetFirebaseData
+  resetFirebaseData,
+  syncWishlistToFirebase,
+  deleteWishlistFromFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { 
@@ -341,7 +343,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'wishlist'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -355,9 +357,11 @@ export default function App() {
   }, [darkMode]);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [editingWishlistId, setEditingWishlistId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState<{ index: number; value: string } | null>(null);
   const [financeFilter, setFinanceFilter] = useState<'all' | 'market' | 'fuel' | 'income' | 'driver'>('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -569,11 +573,19 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     }
   };
 
+  const initialWishlistState: Partial<WishlistItem> = {
+    title: '',
+    notes: '',
+    estimatedPrice: 0,
+    completed: false
+  };
+
   const [newTask, setNewTask] = useState<Partial<Task>>(initialTaskState);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>(() => {
     const saved = sessionStorage.getItem('pending_transaction');
     return saved ? JSON.parse(saved) : initialTransactionState;
   });
+  const [newWishlistItem, setNewWishlistItem] = useState<Partial<WishlistItem>>(initialWishlistState);
 
   // Persist pending transaction and modal state
   useEffect(() => {
@@ -600,11 +612,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         // Check if we should migrate local data
         const tasksRef = collection(db, `users/${currentUser.uid}/tasks`);
         const transRef = collection(db, `users/${currentUser.uid}/transactions`);
+        const wishlistRef = collection(db, `users/${currentUser.uid}/wishlist`);
         const settingsRef = doc(db, `users/${currentUser.uid}/settings/main`);
         
-        const [tasksSnap, transSnap, settingsSnap] = await Promise.all([
+        const [tasksSnap, transSnap, wishlistSnap, settingsSnap] = await Promise.all([
           getDocs(tasksRef),
           getDocs(transRef),
+          getDocs(wishlistRef),
           getDoc(settingsRef)
         ]);
 
@@ -624,6 +638,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           setIsMigrating(true);
           for (const trans of data.transactions) {
             await syncTransactionToFirebase(trans);
+          }
+          setIsMigrating(false);
+        }
+
+        // Migrate wishlist if cloud is empty but local is not
+        if (wishlistSnap.empty && (data.wishlist || []).length > 0) {
+          console.log("Migrating local wishlist to Firebase...");
+          setIsMigrating(true);
+          for (const item of (data.wishlist || [])) {
+            await syncWishlistToFirebase(item);
           }
           setIsMigrating(false);
         }
@@ -667,10 +691,18 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       }
     }, (err) => handleFirestoreError(err, OperationType.GET, `users/${user.uid}/settings/main`));
 
+    const wishlistQuery = query(collection(db, `users/${user.uid}/wishlist`), orderBy('createdAt', 'desc'));
+    const unsubWishlist = onSnapshot(wishlistQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
+      const wishlist = snapshot.docs.map(doc => doc.data() as any);
+      setData(prev => ({ ...prev, wishlist }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/wishlist`));
+
     return () => {
       unsubTasks();
       unsubTrans();
       unsubSettings();
+      unsubWishlist();
     };
   }, [user]);
 
@@ -708,7 +740,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const personalExpense = personal.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     const personalIncome = personal.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
     const personalSavings = personal.filter(t => t.type === 'savings').reduce((acc, t) => acc + t.amount, 0);
-    const balance = personalIncome - personalExpense - personalSavings;
+    const balance = personalIncome - personalExpense;
     
     const pendingTasks = data.tasks.filter(t => !t.completed).length;
 
@@ -1007,17 +1039,94 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     }
   };
 
-  const deleteItem = async (id: string, type: 'task' | 'transaction') => {
-    // Optimistic update
+  const addWishlistItem = async () => {
+    if (!newWishlistItem.title) return;
+
+    const itemData = {
+      title: newWishlistItem.title,
+      notes: newWishlistItem.notes || '',
+      estimatedPrice: Number(newWishlistItem.estimatedPrice) || 0,
+      completed: newWishlistItem.completed || false
+    };
+
+    if (editingWishlistId) {
+      const updatedItem = {
+        ...(data.wishlist?.find(w => w.id === editingWishlistId) || {} as any),
+        ...itemData
+      };
+      
+      setData(prev => ({
+        ...prev,
+        wishlist: (prev.wishlist || []).map(w => w.id === editingWishlistId ? updatedItem : w)
+      }));
+
+      if (user) {
+        try {
+          await syncWishlistToFirebase(updatedItem);
+        } catch (err: any) {
+          console.error("Failed to sync wishlist (edit):", err);
+          alert(parseFirestoreError(err));
+        }
+      }
+    } else {
+      const item: WishlistItem = {
+        id: crypto.randomUUID(),
+        ...itemData,
+        createdAt: new Date().toISOString()
+      };
+      
+      setData(prev => ({ ...prev, wishlist: [item, ...(prev.wishlist || [])] }));
+
+      if (user) {
+        try {
+          await syncWishlistToFirebase(item);
+        } catch (err: any) {
+          console.error("Failed to sync wishlist (new):", err);
+          alert(parseFirestoreError(err));
+        }
+      }
+    }
+    
+    setShowWishlistModal(false);
+    setEditingWishlistId(null);
+    setNewWishlistItem(initialWishlistState);
+  };
+
+  const toggleWishlistItem = async (id: string) => {
+    const item = (data.wishlist || []).find(w => w.id === id);
+    if (!item) return;
+    
+    const updatedItem = { ...item, completed: !item.completed };
+    
     setData(prev => ({
       ...prev,
-      [type === 'task' ? 'tasks' : 'transactions']: prev[type === 'task' ? 'tasks' : 'transactions'].filter((item: any) => item.id !== id)
+      wishlist: (prev.wishlist || []).map(w => w.id === id ? updatedItem : w)
     }));
 
     if (user) {
       try {
+        await syncWishlistToFirebase(updatedItem);
+      } catch (err) {
+        console.error("Failed to toggle wishlist item:", err);
+      }
+    }
+  };
+
+  const deleteItem = async (id: string, type: 'task' | 'transaction' | 'wishlist') => {
+    // Optimistic update
+    setData(prev => {
+      const newData = { ...prev };
+      if (type === 'task') newData.tasks = prev.tasks.filter(t => t.id !== id);
+      else if (type === 'transaction') newData.transactions = prev.transactions.filter(t => t.id !== id);
+      else if (type === 'wishlist') newData.wishlist = (prev.wishlist || []).filter(w => w.id !== id);
+      return newData;
+    });
+
+    if (user) {
+      try {
         if (type === 'task') await deleteTaskFromFirebase(id);
-        else await deleteTransactionFromFirebase(id);
+        else if (type === 'transaction') await deleteTransactionFromFirebase(id);
+        else if (type === 'wishlist') await deleteWishlistFromFirebase(id);
       } catch (err) {
         console.error("Failed to delete item:", err);
         // Rollback happens automatically via onSnapshot if sync fails
@@ -1026,6 +1135,69 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   // --- Render Sections ---
+
+  const renderWishlist = () => (
+    <div className="space-y-6 pb-24">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+          <ShoppingCart className="w-7 h-7 text-blue-600" /> پێداویستییەکان
+        </h2>
+        <Button onClick={() => {
+          setEditingWishlistId(null);
+          setNewWishlistItem(initialWishlistState);
+          setShowWishlistModal(true);
+        }} className="rounded-2xl px-6">
+          <Plus className="w-5 h-5 ml-2" /> زیادکردن
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {(data.wishlist || []).length === 0 ? (
+          <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
+            <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 font-medium text-lg">هیچ پێداویستییەک نییە لە لیستەکەدا</p>
+          </div>
+        ) : (
+          (data.wishlist || []).map(item => (
+            <Card key={item.id} className={cn("transition-all", item.completed && "opacity-60 bg-slate-50")}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4 flex-1">
+                  <button 
+                    onClick={() => toggleWishlistItem(item.id)}
+                    className={cn(
+                      "mt-1 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors",
+                      item.completed ? "bg-green-500 border-green-500 text-white" : "border-slate-300 text-transparent hover:border-green-500"
+                    )}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                  <div className="flex-1">
+                    <h4 className={cn("font-bold text-lg", item.completed && "line-through text-slate-500")}>{item.title}</h4>
+                    {item.notes && <p className="text-sm text-slate-500 mt-1">{item.notes}</p>}
+                    {item.estimatedPrice ? (
+                      <p className="text-sm font-bold text-blue-600 mt-2">{item.estimatedPrice.toLocaleString()} د.ع</p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => {
+                    setEditingWishlistId(item.id);
+                    setNewWishlistItem(item);
+                    setShowWishlistModal(true);
+                  }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => deleteItem(item.id, 'wishlist')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   const renderDashboard = () => (
     <div className="space-y-8 pb-12">
@@ -1208,7 +1380,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <h3 className="text-xl font-black flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-green-600" /> کۆتا جوڵەکان
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('finance')}>هەمووی</Button>
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab('personal')}>هەمووی</Button>
           </div>
           <div className="space-y-3">
             {data.transactions.slice(0, 4).map(t => (
@@ -1743,6 +1915,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'dashboard' && renderDashboard()}
               {activeTab === 'tasks' && renderTasks()}
               {activeTab === 'personal' && renderFinance('personal')}
+              {activeTab === 'wishlist' && renderWishlist()}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -1753,6 +1926,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             { id: 'dashboard', icon: LayoutDashboard, label: 'سەرەتا' },
             { id: 'tasks', icon: CheckSquare, label: 'ئیشەکان' },
             { id: 'personal', icon: User, label: 'تایبەت' },
+            { id: 'wishlist', icon: ShoppingCart, label: 'پێداویستی' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -2347,6 +2521,61 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </div>
                 </div>
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addTransaction}>تۆمارکردن</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+        {showWishlistModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWishlistModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+                    <ShoppingCart className="w-6 h-6" />
+                  </div>
+                  {editingWishlistId ? 'دەستکاری پێداویستی' : 'پێداویستی نوێ'}
+                </h3>
+                <button onClick={() => setShowWishlistModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+                  <Plus className="w-6 h-6 rotate-45 text-slate-500" />
+                </button>
+              </div>
+              <div className="p-8 space-y-6 overflow-y-auto">
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">ناوی پێداویستی</label>
+                  <input 
+                    type="text" 
+                    placeholder="نموونە: سەرە شەحن، غاز..." 
+                    value={newWishlistItem.title || ''} 
+                    onChange={e => setNewWishlistItem(p => ({ ...p, title: e.target.value }))} 
+                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-lg text-[var(--text-main)]" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">تێبینی (ئارەزوومەندانە)</label>
+                  <textarea 
+                    placeholder="هەر زانیارییەکی تر..." 
+                    value={newWishlistItem.notes || ''} 
+                    onChange={e => setNewWishlistItem(p => ({ ...p, notes: e.target.value }))} 
+                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-[var(--text-main)] resize-none" 
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">نرخی خەمڵێنراو (ئارەزوومەندانە)</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      placeholder="0" 
+                      value={newWishlistItem.estimatedPrice || ''} 
+                      onChange={e => setNewWishlistItem(p => ({ ...p, estimatedPrice: Number(e.target.value) }))} 
+                      className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xl text-left text-[var(--text-main)]" 
+                      dir="ltr"
+                    />
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold">د.ع</span>
+                  </div>
+                </div>
+                <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addWishlistItem}>تۆمارکردن</Button>
               </div>
             </motion.div>
           </div>

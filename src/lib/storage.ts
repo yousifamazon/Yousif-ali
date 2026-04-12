@@ -24,7 +24,7 @@ export const getStoredData = (): AppData => {
   const defaultDescriptions = [
     'بەنزین', 'دکتۆر', 'مارکێت', 'جگەرە', 'میوە', 'چاکردنەوەی سەیارە', 'کارەبا', 'کرێ', 'هێنانەوەی شیر'
   ];
-  const defaultData: AppData = { tasks: [], transactions: [], descriptions: defaultDescriptions, history: {} };
+  const defaultData: AppData = { tasks: [], transactions: [], wishlist: [], descriptions: defaultDescriptions, history: {} };
   let data = null;
   try {
     data = localStorage.getItem(STORAGE_KEY);
@@ -144,6 +144,36 @@ export const syncSettingsToFirebase = async (descriptions: string[], history: an
   }
 };
 
+export const syncWishlistToFirebase = async (item: any) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/wishlist/${item.id}`;
+  try {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (item.createdAt || new Date().toISOString());
+    
+    const dataToSync = removeUndefined({
+      ...item,
+      userId: auth.currentUser.uid,
+      createdAt: createdAt
+    });
+
+    await setDoc(docRef, dataToSync);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const deleteWishlistFromFirebase = async (id: string) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/wishlist/${id}`;
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
 export const resetFirebaseData = async () => {
   if (!auth.currentUser) return;
   const uid = auth.currentUser.uid;
@@ -157,10 +187,14 @@ export const resetFirebaseData = async () => {
     const transSnapshot = await getDocs(collection(db, `users/${uid}/transactions`));
     const transDeletions = transSnapshot.docs.map(doc => deleteDoc(doc.ref));
     
+    // Delete wishlist
+    const wishlistSnapshot = await getDocs(collection(db, `users/${uid}/wishlist`));
+    const wishlistDeletions = wishlistSnapshot.docs.map(doc => deleteDoc(doc.ref));
+
     // Delete settings
     const settingsRef = doc(db, `users/${uid}/settings/main`);
     
-    await Promise.all([...taskDeletions, ...transDeletions, deleteDoc(settingsRef)]);
+    await Promise.all([...taskDeletions, ...transDeletions, ...wishlistDeletions, deleteDoc(settingsRef)]);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
   }

@@ -48,9 +48,19 @@ export type Transaction = {
   debtAmount?: number;
 };
 
+export type WishlistItem = {
+  id: string;
+  title: string;
+  notes?: string;
+  estimatedPrice?: number;
+  createdAt: string;
+  completed: boolean;
+};
+
 export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
+  wishlist?: WishlistItem[];
   descriptions: string[];
   history?: Record<string, string[]>;
 };
