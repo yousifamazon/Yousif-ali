@@ -145,6 +145,15 @@ service cloud.firestore {
              data.userId == request.auth.uid;
     }
 
+    function isValidProduct(data) {
+      return data.id is string &&
+             data.barcode is string &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+             data.price is number && data.price >= 0 &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string && isValidDateTime(data.createdAt);
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -152,6 +161,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId);
       
+      match /products/{productId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidProduct(request.resource.data);
+        allow update: if isOwner(userId) && isValidProduct(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
       match /tasks/{taskId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidTask(request.resource.data);

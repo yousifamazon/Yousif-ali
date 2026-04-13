@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { scanReceipt } from './services/geminiService';
+import { BarcodeScanner } from './components/BarcodeScanner';
 import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isPast } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -81,7 +82,8 @@ import {
   syncDebtToFirebase,
   deleteDebtFromFirebase,
   syncSavingsGoalToFirebase,
-  deleteSavingsGoalFromFirebase
+  deleteSavingsGoalFromFirebase,
+  syncProductToFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { 
@@ -433,6 +435,10 @@ export default function App() {
   const [withdrawGoalId, setWithdrawGoalId] = useState<string | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const [newProduct, setNewProduct] = useState<{ name: string, price: number }>({ name: '', price: 0 });
+  const [quickAddAmounts, setQuickAddAmounts] = useState<Record<string, number>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingWishlistId, setEditingWishlistId] = useState<string | null>(null);
@@ -640,6 +646,48 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     savingsEffect: 'none'
   };
 
+  const handleBarcodeScan = (barcode: string) => {
+    setShowBarcodeScanner(false);
+    
+    // Look up product in local state
+    const existingProduct = data.products?.find(p => p.barcode === barcode);
+    
+    if (existingProduct) {
+      // Add to receipt items
+      setNewTransaction(p => ({
+        ...p,
+        receiptItems: [...(p.receiptItems || []), { name: existingProduct.name, price: existingProduct.price, quantity: 1, unitPrice: existingProduct.price }]
+      }));
+    } else {
+      // Prompt for new product
+      setScannedBarcode(barcode);
+    }
+  };
+
+  const handleSaveNewProduct = async () => {
+    if (!scannedBarcode || !newProduct.name || newProduct.price <= 0) return;
+    
+    const productData = {
+      id: crypto.randomUUID(),
+      barcode: scannedBarcode,
+      name: newProduct.name,
+      price: newProduct.price,
+      createdAt: new Date().toISOString(),
+      userId: user?.uid
+    };
+    
+    await syncProductToFirebase(productData);
+    
+    // Add to receipt items
+    setNewTransaction(p => ({
+      ...p,
+      receiptItems: [...(p.receiptItems || []), { name: newProduct.name, price: newProduct.price, quantity: 1, unitPrice: newProduct.price }]
+    }));
+    
+    setScannedBarcode(null);
+    setNewProduct({ name: '', price: 0 });
+  };
+
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -662,6 +710,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   const [activeWishlistTab, setActiveWishlistTab] = useState<'general' | 'private'>('general');
   const [debts, setDebts] = useState<Debt[]>([]);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [newTask, setNewTask] = useState<Partial<Task>>(initialTaskState);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>(() => {
@@ -799,6 +848,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       setSavingsGoals(savingsGoals);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/savingsGoals`));
 
+    const productsQuery = query(collection(db, `users/${user.uid}/products`), orderBy('createdAt', 'desc'));
+    const unsubProducts = onSnapshot(productsQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
+      const products = snapshot.docs.map(doc => doc.data() as Product);
+      setData(prev => ({ ...prev, products }));
+      setProducts(products);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/products`));
+
     return () => {
       unsubTasks();
       unsubTrans();
@@ -806,6 +863,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       unsubWishlist();
       unsubDebts();
       unsubSavings();
+      unsubProducts();
     };
   }, [user]);
 
@@ -1186,7 +1244,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   const handleWithdrawSavings = async () => {
     if (!withdrawGoalId || !withdrawAmount || withdrawAmount <= 0) return;
     
-    const goal = data.savingsGoals.find(g => g.id === withdrawGoalId);
+    const goal = data.savingsGoals?.find(g => g.id === withdrawGoalId);
     if (!goal) return;
 
     if (withdrawAmount > goal.currentAmount) {
@@ -1217,8 +1275,38 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setWithdrawGoalId(null);
     setWithdrawAmount(0);
   };
+
+  const handleQuickAddSavings = async (goal: SavingsGoal) => {
+    const amountToAdd = quickAddAmounts[goal.id];
+    if (!amountToAdd || amountToAdd <= 0) return;
+
+    const updatedGoal = {
+      ...goal,
+      currentAmount: goal.currentAmount + amountToAdd
+    };
+    await syncSavingsGoalToFirebase(updatedGoal);
+
+    const transactionData = {
+      id: crypto.randomUUID(),
+      type: 'savings' as const,
+      amount: amountToAdd,
+      category: 'personal' as const,
+      description: `زیادکردن بۆ پاشەکەوتی: ${goal.title}`,
+      date: new Date().toISOString().split('T')[0],
+      savingsEffect: 'subtract' as const,
+      userId: user?.uid,
+      createdAt: new Date().toISOString()
+    };
+    await syncTransactionToFirebase(transactionData);
+
+    setQuickAddAmounts(p => {
+      const next = { ...p };
+      delete next[goal.id];
+      return next;
+    });
+  };
+
   const addWishlistItem = async () => {
-    if (!newWishlistItem.title) return;
 
     const itemData = {
       title: newWishlistItem.title,
@@ -1514,6 +1602,30 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   <span>{goal.currentAmount.toLocaleString()} د.ع</span>
                   <span>{goal.targetAmount.toLocaleString()} د.ع</span>
                 </div>
+                {goal.currentAmount < goal.targetAmount && (
+                  <div className="pt-2 flex items-center gap-2">
+                    <div className="flex-1 relative">
+                      <FormattedNumberInput 
+                        value={quickAddAmounts[goal.id] || ''} 
+                        onChange={val => setQuickAddAmounts(p => ({ ...p, [goal.id]: val }))} 
+                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" 
+                        placeholder="بڕی پارە زیاد بکە..." 
+                      />
+                    </div>
+                    <button 
+                      onClick={() => handleQuickAddSavings(goal)}
+                      disabled={!quickAddAmounts[goal.id] || quickAddAmounts[goal.id] <= 0}
+                      className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+                {goal.currentAmount < goal.targetAmount && (
+                  <div className="text-xs text-slate-500 font-bold text-center">
+                    ماوە بۆ تەواوبوون: {(goal.targetAmount - goal.currentAmount).toLocaleString()} د.ع
+                  </div>
+                )}
               </Card>
             );
           })}
@@ -2874,12 +2986,20 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             )}
                           </div>
                         ))}
-                        <button 
-                          onClick={() => setNewTransaction(p => ({ ...p, receiptItems: [...(p.receiptItems || []), { name: '', price: 0 }] }))}
-                          className="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
-                        >
-                          <Plus className="w-4 h-4" /> زیادکردنی بابەت
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setNewTransaction(p => ({ ...p, receiptItems: [...(p.receiptItems || []), { name: '', price: 0 }] }))}
+                            className="flex-1 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" /> زیادکردنی بابەت
+                          </button>
+                          <button 
+                            onClick={() => setShowBarcodeScanner(true)}
+                            className="flex-1 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-green-400 hover:text-green-500 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Camera className="w-4 h-4" /> سکانی بارکۆد
+                          </button>
+                        </div>
                       </div>
                       
                       <div className="mt-4 p-5 bg-blue-600 rounded-[2rem] text-white flex justify-between items-center shadow-lg shadow-blue-100">
@@ -3045,6 +3165,50 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   />
                 </div>
                 <Button className="w-full py-5 rounded-3xl text-lg" onClick={handleWithdrawSavings}>ڕاکێشان</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showBarcodeScanner && (
+          <BarcodeScanner 
+            onScan={handleBarcodeScan} 
+            onClose={() => setShowBarcodeScanner(false)} 
+          />
+        )}
+
+        {scannedBarcode && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setScannedBarcode(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <ShoppingCart className="w-6 h-6 text-blue-600" />
+                  کاڵای نوێ
+                </h3>
+                <button onClick={() => setScannedBarcode(null)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">ناوی کاڵا</label>
+                  <input 
+                    type="text"
+                    value={newProduct.name} 
+                    onChange={e => setNewProduct(p => ({ ...p, name: e.target.value }))} 
+                    className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                    placeholder="ناوی کاڵا بنووسە..." 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">نرخ (دینار)</label>
+                  <FormattedNumberInput 
+                    value={newProduct.price || ''} 
+                    onChange={val => setNewProduct(p => ({ ...p, price: val }))} 
+                    className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                    placeholder="0" 
+                  />
+                </div>
+                <Button className="w-full py-5 rounded-3xl text-lg" onClick={handleSaveNewProduct}>پاشەکەوتکردن</Button>
               </div>
             </motion.div>
           </div>

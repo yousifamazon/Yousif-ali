@@ -79,12 +79,21 @@ export type WishlistItem = {
   type?: 'general' | 'private';
 };
 
+export type Product = {
+  id: string;
+  barcode: string;
+  name: string;
+  price: number;
+  createdAt: string;
+};
+
 export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
   wishlist?: WishlistItem[];
   debts?: Debt[];
   savingsGoals?: SavingsGoal[];
+  products?: Product[];
   descriptions: string[];
   history?: Record<string, string[]>;
 };

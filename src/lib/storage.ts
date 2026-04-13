@@ -224,6 +224,26 @@ export const syncSavingsGoalToFirebase = async (goal: any) => {
   }
 };
 
+export const syncProductToFirebase = async (product: any) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/products/${product.id}`;
+  try {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (product.createdAt || new Date().toISOString());
+    
+    const dataToSync = removeUndefined({
+      ...product,
+      userId: auth.currentUser.uid,
+      createdAt: createdAt
+    });
+
+    await setDoc(docRef, dataToSync);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
 export const deleteSavingsGoalFromFirebase = async (id: string) => {
   if (!auth.currentUser) return;
   const path = `users/${auth.currentUser.uid}/savingsGoals/${id}`;
