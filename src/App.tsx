@@ -42,7 +42,10 @@ import {
   Image as ImageIcon,
   Share2,
   Sparkles,
-  Loader2
+  Loader2,
+  Menu,
+  X,
+  ArrowDownToLine
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { scanReceipt } from './services/geminiService';
@@ -74,7 +77,11 @@ import {
   syncSettingsToFirebase,
   resetFirebaseData,
   syncWishlistToFirebase,
-  deleteWishlistFromFirebase
+  deleteWishlistFromFirebase,
+  syncDebtToFirebase,
+  deleteDebtFromFirebase,
+  syncSavingsGoalToFirebase,
+  deleteSavingsGoalFromFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { 
@@ -338,6 +345,66 @@ const HistoryInput = ({
   );
 };
 
+const FormattedNumberInput = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  className,
+  dir,
+  disabled
+}: { 
+  value: number | string; 
+  onChange: (val: number) => void; 
+  placeholder?: string; 
+  className?: string;
+  dir?: string;
+  disabled?: boolean;
+}) => {
+  const [displayValue, setDisplayValue] = useState(value ? Number(value).toLocaleString() : '');
+
+  useEffect(() => {
+    if (value === '' || value === 0) {
+      setDisplayValue('');
+    } else {
+      const currentNum = parseInt(displayValue.replace(/,/g, ''), 10);
+      if (currentNum !== Number(value)) {
+        setDisplayValue(Number(value).toLocaleString());
+      }
+    }
+  }, [value]);
+
+  const toEnglishDigits = (str: string) => {
+    const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return str.replace(/[٠-٩]/g, w => arabicNumbers.indexOf(w).toString());
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const englishStr = toEnglishDigits(e.target.value);
+    const rawValue = englishStr.replace(/[^\d]/g, '');
+    if (rawValue === '') {
+      setDisplayValue('');
+      onChange(0);
+    } else {
+      const numValue = parseInt(rawValue, 10);
+      setDisplayValue(numValue.toLocaleString());
+      onChange(numValue);
+    }
+  };
+
+  return (
+    <input 
+      type="text" 
+      inputMode="numeric"
+      value={displayValue} 
+      onChange={handleChange} 
+      className={className} 
+      placeholder={placeholder} 
+      dir={dir}
+      disabled={disabled}
+    />
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -362,6 +429,9 @@ export default function App() {
   const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawGoalId, setWithdrawGoalId] = useState<string | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [showResetModal, setShowResetModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -370,6 +440,7 @@ export default function App() {
   const [editingSavingsId, setEditingSavingsId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState<{ index: number; value: string } | null>(null);
   const [financeFilter, setFinanceFilter] = useState<'all' | 'market' | 'fuel' | 'income' | 'driver'>('all');
+  const [showSidebar, setShowSidebar] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
@@ -1111,6 +1182,41 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setShowSavingsModal(false);
     setNewSavings({ targetAmount: 0, currentAmount: 0 });
   };
+
+  const handleWithdrawSavings = async () => {
+    if (!withdrawGoalId || !withdrawAmount || withdrawAmount <= 0) return;
+    
+    const goal = data.savingsGoals.find(g => g.id === withdrawGoalId);
+    if (!goal) return;
+
+    if (withdrawAmount > goal.currentAmount) {
+      alert('بڕی دیاریکراو زیاترە لە بڕی پاشەکەوتکراو');
+      return;
+    }
+
+    const updatedGoal = {
+      ...goal,
+      currentAmount: goal.currentAmount - withdrawAmount
+    };
+    await syncSavingsGoalToFirebase(updatedGoal);
+
+    const transactionData = {
+      id: crypto.randomUUID(),
+      type: 'savings' as const,
+      amount: withdrawAmount,
+      category: 'personal' as const,
+      description: `ڕاکێشانی پارە لە پاشەکەوتی: ${goal.title}`,
+      date: new Date().toISOString().split('T')[0],
+      savingsEffect: 'add' as const,
+      userId: user?.uid,
+      createdAt: new Date().toISOString()
+    };
+    await syncTransactionToFirebase(transactionData);
+
+    setShowWithdrawModal(false);
+    setWithdrawGoalId(null);
+    setWithdrawAmount(0);
+  };
   const addWishlistItem = async () => {
     if (!newWishlistItem.title) return;
 
@@ -1209,6 +1315,97 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
   // --- Render Sections ---
 
+  const renderWishlist = () => {
+    const items = (data.wishlist || []).filter(w => activeWishlistTab === 'general' ? w.type !== 'private' : w.type === 'private');
+    
+    return (
+      <div className="space-y-6 pb-24">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+            <Sparkles className="w-7 h-7 text-yellow-500" /> ئاواتەکان
+          </h2>
+          <Button onClick={() => {
+            setEditingWishlistId(null);
+            setNewWishlistItem(initialWishlistState);
+            setShowWishlistModal(true);
+          }} className="rounded-2xl px-6">
+            <Plus className="w-5 h-5 ml-2" /> زیادکردن
+          </Button>
+        </div>
+
+        <div className="flex gap-2 bg-[var(--bg-card)] p-1 rounded-2xl border border-[var(--border-color)]">
+          <button
+            onClick={() => setActiveWishlistTab('general')}
+            className={cn(
+              "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
+              activeWishlistTab === 'general' ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+            )}
+          >
+            گشتی
+          </button>
+          <button
+            onClick={() => setActiveWishlistTab('private')}
+            className={cn(
+              "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
+              activeWishlistTab === 'private' ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+            )}
+          >
+            تایبەت
+          </button>
+        </div>
+
+        <div className="grid gap-4">
+          {items.length === 0 ? (
+            <div className="text-center py-12 text-[var(--text-muted)]">هیچ ئاواتێک نییە</div>
+          ) : (
+            items.map(item => (
+              <Card key={item.id} className={cn("p-5", item.completed && "opacity-60")}>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <button 
+                        onClick={() => toggleItemStatus(item.id, 'wishlist')}
+                        className={cn(
+                          "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
+                          item.completed ? "bg-green-500 border-green-500 text-white" : "border-slate-300 hover:border-green-500"
+                        )}
+                      >
+                        {item.completed && <CheckCircle2 className="w-4 h-4" />}
+                      </button>
+                      <h3 className={cn("font-black text-lg", item.completed ? "line-through text-slate-500" : "text-[var(--text-main)]")}>
+                        {item.title}
+                      </h3>
+                    </div>
+                    {item.notes && <p className="text-sm text-[var(--text-muted)] mt-2 whitespace-pre-wrap">{item.notes}</p>}
+                    {item.estimatedPrice ? (
+                      <div className="mt-3 inline-block bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-lg text-sm font-bold">
+                        {item.estimatedPrice.toLocaleString()} دینار
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => {
+                      setEditingWishlistId(item.id);
+                      setNewWishlistItem(item);
+                      setShowWishlistModal(true);
+                    }} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => {
+                      if(window.confirm('دڵنیایت لە سڕینەوەی؟')) deleteItem(item.id, 'wishlist');
+                    }} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderDebts = () => {
     const totalOwed = (data.debts || []).filter(d => d.type === 'owed' && !d.completed).reduce((acc, d) => acc + d.amount, 0);
     const totalOwing = (data.debts || []).filter(d => d.type === 'owing' && !d.completed).reduce((acc, d) => acc + d.amount, 0);
@@ -1221,6 +1418,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </h2>
           <Button onClick={() => {
             setEditingDebtId(null);
+            setNewDebt({ type: 'owed', amount: 0 });
             setShowDebtModal(true);
           }} className="rounded-2xl px-6">
             <Plus className="w-5 h-5 ml-2" /> زیادکردن
@@ -1250,6 +1448,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 <div className="flex items-center gap-2">
                   <button onClick={() => {
                     setEditingDebtId(debt.id);
+                    setNewDebt(debt);
                     setShowDebtModal(true);
                   }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
                     <Edit2 className="w-4 h-4" />
@@ -1275,6 +1474,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </h2>
           <Button onClick={() => {
             setEditingSavingsId(null);
+            setNewSavings({ targetAmount: 0, currentAmount: 0 });
             setShowSavingsModal(true);
           }} className="rounded-2xl px-6">
             <Plus className="w-5 h-5 ml-2" /> زیادکردن
@@ -1290,7 +1490,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   <h4 className="font-bold text-xl">{goal.title}</h4>
                   <div className="flex items-center gap-2">
                     <button onClick={() => {
+                      setWithdrawGoalId(goal.id);
+                      setShowWithdrawModal(true);
+                    }} className="p-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-colors" title="ڕاکێشانی پارە">
+                      <ArrowDownToLine className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => {
                       setEditingSavingsId(goal.id);
+                      setNewSavings(goal);
                       setShowSavingsModal(true);
                     }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
                       <Edit2 className="w-4 h-4" />
@@ -1970,15 +2177,23 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 no-print">
-          <div className="flex-shrink-0">
-            <motion.h1 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-4xl font-black text-[var(--text-main)] tracking-tight"
+          <div className="flex-shrink-0 flex justify-start items-center">
+            <button 
+              onClick={() => setShowSidebar(true)}
+              className="w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all ml-4 shrink-0"
             >
-              رۆژانەی یوسف
-            </motion.h1>
-            <p className="text-[var(--text-muted)] font-bold mt-1">بەڕێوەبردنی زیرەکانەی کار و دارایی</p>
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="text-right">
+              <motion.h1 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-4xl font-black text-[var(--text-main)] tracking-tight"
+              >
+                رۆژانەی یوسف
+              </motion.h1>
+              <p className="text-[var(--text-muted)] font-bold mt-1">بەڕێوەبردنی زیرەکانەی کار و دارایی</p>
+            </div>
           </div>
 
           <div className="flex flex-1 items-center gap-3 max-w-xl">
@@ -2018,6 +2233,62 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </div>
         </header>
 
+        {/* Sidebar Navigation */}
+        <AnimatePresence>
+          {showSidebar && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                onClick={() => setShowSidebar(false)} 
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" 
+              />
+              <motion.div 
+                initial={{ x: '100%' }} 
+                animate={{ x: 0 }} 
+                exit={{ x: '100%' }} 
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed top-0 right-0 bottom-0 w-72 bg-[var(--bg-card)] shadow-2xl z-[101] flex flex-col border-l border-[var(--border-color)]"
+              >
+                <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center">
+                  <h2 className="text-2xl font-black text-[var(--text-main)]">لیستی بەشەکان</h2>
+                  <button onClick={() => setShowSidebar(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                    <X className="w-6 h-6 text-[var(--text-muted)]" />
+                  </button>
+                </div>
+                <div className="p-4 flex-1 overflow-y-auto space-y-2">
+                  {[
+                    { id: 'dashboard', label: 'داشبۆرد', icon: LayoutDashboard },
+                    { id: 'tasks', label: 'ئەرکەکان', icon: CheckSquare },
+                    { id: 'personal', label: 'دارایی', icon: Wallet },
+                    { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
+                    { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
+                    { id: 'savings', label: 'پاشەکەوت', icon: PiggyBank },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as any);
+                        setShowSidebar(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-bold transition-all",
+                        activeTab === tab.id 
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" 
+                          : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[var(--text-main)]"
+                      )}
+                    >
+                      <tab.icon className="w-6 h-6" />
+                      <span className="text-lg">{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
         {/* Dynamic Content */}
         <main>
           <AnimatePresence mode="wait">
@@ -2039,30 +2310,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </main>
 
         {/* Bottom Nav */}
-        <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--bg-card)]/90 backdrop-blur-2xl border border-[var(--border-color)] shadow-2xl rounded-[2.5rem] p-2 flex items-center gap-1 z-50 no-print">
-          {[
-            { id: 'dashboard', icon: LayoutDashboard, label: 'سەرەتا' },
-            { id: 'tasks', icon: CheckSquare, label: 'ئیشەکان' },
-            { id: 'personal', icon: User, label: 'تایبەت' },
-            { id: 'wishlist', icon: ShoppingCart, label: 'پێداویستی' },
-            { id: 'debts', icon: UserMinus, label: 'قەرز' },
-            { id: 'savings', icon: PiggyBank, label: 'پاشەکەوت' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3.5 rounded-[2rem] transition-all duration-300",
-                activeTab === tab.id 
-                  ? "bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105" 
-                  : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
-              )}
-            >
-              <tab.icon className={cn("w-5 h-5", activeTab === tab.id ? "animate-pulse" : "")} />
-              {activeTab === tab.id && <span className="font-black text-sm">{tab.label}</span>}
-            </button>
-          ))}
-        </nav>
+        {/* Removed */}
       </div>
 
       {/* Modals */}
@@ -2304,10 +2552,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 <div className={cn("space-y-2", (!['بەنزین'].includes(newTransaction.description || '') && newTransaction.type === 'expense') && "hidden")}>
                   <label className="text-sm font-black text-slate-500 mr-1">بڕ (دینار)</label>
-                  <input 
-                    type="number" 
+                  <FormattedNumberInput 
                     value={newTransaction.description === 'بەنزین' ? (Number(newTransaction.fuelLiters || 0) * Number(newTransaction.fuelPricePerLiter || 0)) : (newTransaction.amount || '')} 
-                    onChange={e => setNewTransaction(p => ({ ...p, amount: Number(e.target.value) }))} 
+                    onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
                     disabled={newTransaction.description === 'بەنزین'}
                     className={cn(
                       "w-full px-6 py-6 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-black text-3xl text-center text-[var(--text-main)]",
@@ -2389,19 +2636,17 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 mr-1">کۆی گشتی (دینار)</label>
-                        <input 
-                          type="number" 
+                        <FormattedNumberInput 
                           value={newTransaction.amount || ''} 
-                          onChange={e => setNewTransaction(p => ({ ...p, amount: Number(e.target.value) }))} 
+                          onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
                           className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 mr-1">داشکاندن</label>
-                        <input 
-                          type="number" 
+                        <FormattedNumberInput 
                           value={newTransaction.discount || ''} 
-                          onChange={e => setNewTransaction(p => ({ ...p, discount: Number(e.target.value) }))} 
+                          onChange={val => setNewTransaction(p => ({ ...p, discount: val }))} 
                           className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         />
                       </div>
@@ -2410,19 +2655,17 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 mr-1">وەرگیراو (پارەی دراو)</label>
-                        <input 
-                          type="number" 
+                        <FormattedNumberInput 
                           value={newTransaction.paidAmount || ''} 
-                          onChange={e => setNewTransaction(p => ({ ...p, paidAmount: Number(e.target.value) }))} 
+                          onChange={val => setNewTransaction(p => ({ ...p, paidAmount: val }))} 
                           className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 mr-1">ماوە</label>
-                        <input 
-                          type="number" 
+                        <FormattedNumberInput 
                           value={newTransaction.remainingAmount || (Number(newTransaction.amount || 0) - Number(newTransaction.discount || 0) - Number(newTransaction.paidAmount || 0))} 
-                          onChange={e => setNewTransaction(p => ({ ...p, remainingAmount: Number(e.target.value) }))} 
+                          onChange={val => setNewTransaction(p => ({ ...p, remainingAmount: val }))} 
                           className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         />
                       </div>
@@ -2430,10 +2673,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-500 mr-1">قەرز</label>
-                      <input 
-                        type="number" 
+                      <FormattedNumberInput 
                         value={newTransaction.debtAmount || ''} 
-                        onChange={e => setNewTransaction(p => ({ ...p, debtAmount: Number(e.target.value) }))} 
+                        onChange={val => setNewTransaction(p => ({ ...p, debtAmount: val }))} 
                         className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-red-600" 
                       />
                     </div>
@@ -2468,10 +2710,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-500 mr-1">بڕ (دینار)</label>
-                      <input 
-                        type="number" 
+                      <FormattedNumberInput 
                         value={newTransaction.amount || ''} 
-                        onChange={e => setNewTransaction(p => ({ ...p, amount: Number(e.target.value) }))} 
+                        onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
                         className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         placeholder="0"
                       />
@@ -2536,19 +2777,17 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 mr-1">بڕی لیتر</label>
-                        <input 
-                          type="number" 
+                        <FormattedNumberInput 
                           value={newTransaction.fuelLiters || ''} 
-                          onChange={e => setNewTransaction(p => ({ ...p, fuelLiters: Number(e.target.value) }))} 
+                          onChange={val => setNewTransaction(p => ({ ...p, fuelLiters: val }))} 
                           className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 mr-1">نرخی لیتر</label>
-                        <input 
-                          type="number" 
+                        <FormattedNumberInput 
                           value={newTransaction.fuelPricePerLiter || ''} 
-                          onChange={e => setNewTransaction(p => ({ ...p, fuelPricePerLiter: Number(e.target.value) }))} 
+                          onChange={val => setNewTransaction(p => ({ ...p, fuelPricePerLiter: val }))} 
                           className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
                         />
                       </div>
@@ -2611,13 +2850,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             </div>
                             <div className="w-24 space-y-1">
                               <label className="text-[10px] font-black text-slate-400 mr-1">نرخ</label>
-                              <input 
-                                type="number" 
+                              <FormattedNumberInput 
                                 placeholder="نرخ" 
                                 value={item.price || ''} 
-                                onChange={e => {
+                                onChange={val => {
                                   const next = [...(newTransaction.receiptItems || [])];
-                                  next[index].price = Number(e.target.value);
+                                  next[index].price = val;
                                   setNewTransaction(p => ({ ...p, receiptItems: next }));
                                 }}
                                 className="w-full px-3 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xs text-[var(--text-main)]" 
@@ -2710,11 +2948,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 <div className="space-y-2">
                   <label className="text-sm font-black text-slate-500 mr-1">نرخی خەمڵێنراو (ئارەزوومەندانە)</label>
                   <div className="relative">
-                    <input 
-                      type="number" 
+                    <FormattedNumberInput 
                       placeholder="0" 
                       value={newWishlistItem.estimatedPrice || ''} 
-                      onChange={e => setNewWishlistItem(p => ({ ...p, estimatedPrice: Number(e.target.value) }))} 
+                      onChange={val => setNewWishlistItem(p => ({ ...p, estimatedPrice: val }))} 
                       className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xl text-left text-[var(--text-main)]" 
                       dir="ltr"
                     />
@@ -2722,6 +2959,131 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </div>
                 </div>
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addWishlistItem}>تۆمارکردن</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showDebtModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDebtModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <CreditCard className="w-8 h-8 text-blue-600" />
+                  {editingDebtId ? 'دەستکاری قەرز' : 'قەرزی نوێ'}
+                </h3>
+                <button onClick={() => setShowDebtModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-8 space-y-6 overflow-y-auto flex-1">
+                <div className="flex gap-2 bg-[var(--bg-card)] p-1 rounded-2xl border border-[var(--border-color)]">
+                  <button
+                    onClick={() => setNewDebt(p => ({ ...p, type: 'owed' }))}
+                    className={cn(
+                      "flex-1 py-3 rounded-xl font-bold transition-all",
+                      newDebt.type === 'owed' ? "bg-red-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    قەرزارم
+                  </button>
+                  <button
+                    onClick={() => setNewDebt(p => ({ ...p, type: 'owing' }))}
+                    className={cn(
+                      "flex-1 py-3 rounded-xl font-bold transition-all",
+                      newDebt.type === 'owing' ? "bg-green-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    قەرزم لایە
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">ناوی کەسەکە</label>
+                  <HistoryInput 
+                    value={newDebt.personName || ''} 
+                    onChange={val => setNewDebt(p => ({ ...p, personName: val }))} 
+                    historyKey="debt_person"
+                    history={data.history?.['debt_person']}
+                    onSaveHistory={handleSaveHistory}
+                    placeholder="ناوی کەسەکە..." 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">بڕی پارە (دینار)</label>
+                  <FormattedNumberInput value={newDebt.amount || ''} onChange={val => setNewDebt(p => ({ ...p, amount: val }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">تێبینی (ئارەزوومەندانە)</label>
+                  <textarea value={newDebt.notes || ''} onChange={e => setNewDebt(p => ({ ...p, notes: e.target.value }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold min-h-[100px]" placeholder="تێبینی..." />
+                </div>
+              </div>
+              <div className="p-8 border-t border-[var(--border-color)] bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addDebt}>تۆمارکردن</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showWithdrawModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWithdrawModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <ArrowDownToLine className="w-6 h-6 text-yellow-600" />
+                  ڕاکێشانی پارە
+                </h3>
+                <button onClick={() => setShowWithdrawModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">بڕی پارە (دینار)</label>
+                  <FormattedNumberInput 
+                    value={withdrawAmount || ''} 
+                    onChange={val => setWithdrawAmount(val)} 
+                    className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                    placeholder="0" 
+                  />
+                </div>
+                <Button className="w-full py-5 rounded-3xl text-lg" onClick={handleWithdrawSavings}>ڕاکێشان</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showSavingsModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSavingsModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <PiggyBank className="w-8 h-8 text-green-600" />
+                  {editingSavingsId ? 'دەستکاری ئامانج' : 'ئامانجی نوێ'}
+                </h3>
+                <button onClick={() => setShowSavingsModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-8 space-y-6 overflow-y-auto flex-1">
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">ناوی ئامانج</label>
+                  <HistoryInput 
+                    value={newSavings.title || ''} 
+                    onChange={val => setNewSavings(p => ({ ...p, title: val }))} 
+                    historyKey="savings_title"
+                    history={data.history?.['savings_title']}
+                    onSaveHistory={handleSaveHistory}
+                    placeholder="بۆ نموونە: کڕینی ئۆتۆمبێل..." 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">بڕی ئامانج (دینار)</label>
+                  <FormattedNumberInput value={newSavings.targetAmount || ''} onChange={val => setNewSavings(p => ({ ...p, targetAmount: val }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-slate-500 mr-1">بڕی کۆکراوەی ئێستا (دینار)</label>
+                  <FormattedNumberInput value={newSavings.currentAmount || ''} onChange={val => setNewSavings(p => ({ ...p, currentAmount: val }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="0" />
+                </div>
+              </div>
+              <div className="p-8 border-t border-[var(--border-color)] bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addSavingsGoal}>تۆمارکردن</Button>
               </div>
             </motion.div>
           </div>
