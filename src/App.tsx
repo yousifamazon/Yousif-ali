@@ -139,15 +139,15 @@ export class ErrorBoundary extends React.Component<any, any> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
-          <div className="max-w-md w-full bg-[var(--bg-card)] rounded-3xl p-8 shadow-xl border border-red-100">
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="min-h-screen bg-[var(--bg-main)] flex items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full bg-[var(--bg-card)] rounded-3xl p-8 shadow-xl border border-red-100 dark:border-red-900/30">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-black text-slate-800 mb-4">هەڵەیەک ڕوویدا</h1>
-            <p className="text-slate-600 font-bold mb-6">ببورە، بەرنامەکە تووشی کێشەیەک بوو لە کاتی کارکردن.</p>
-            <div className="bg-red-50 p-4 rounded-2xl text-left mb-6 overflow-auto max-h-40">
-              <code className="text-xs text-red-700 font-mono whitespace-pre-wrap">
+            <h1 className="text-2xl font-black text-[var(--text-main)] mb-4">هەڵەیەک ڕوویدا</h1>
+            <p className="text-[var(--text-muted)] font-bold mb-6">ببورە، بەرنامەکە تووشی کێشەیەک بوو لە کاتی کارکردن.</p>
+            <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl text-left mb-6 overflow-auto max-h-40">
+              <code className="text-xs text-red-700 dark:text-red-400 font-mono whitespace-pre-wrap">
                 {this.state.error?.message}
               </code>
             </div>
@@ -217,9 +217,9 @@ const Button = ({
 }) => {
   const variants = {
     primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100 dark:shadow-none",
-    secondary: "bg-[var(--bg-card)] text-[var(--text-main)] hover:bg-slate-100 dark:hover:bg-slate-800 border border-[var(--border-color)]",
+    secondary: "bg-[var(--bg-card)] text-[var(--text-main)] hover:bg-[var(--bg-main)] border border-[var(--border-color)]",
     danger: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30",
-    ghost: "bg-transparent text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800",
+    ghost: "bg-transparent text-[var(--text-muted)] hover:bg-[var(--bg-main)]",
     accent: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 dark:shadow-none"
   };
 
@@ -247,7 +247,7 @@ const Button = ({
 
 const Badge = ({ children, variant = 'default' }: { children: React.ReactNode; variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' }) => {
   const variants = {
-    default: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400",
+    default: "bg-[var(--bg-main)] text-[var(--text-muted)]",
     success: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400",
     warning: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400",
     danger: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400",
@@ -314,7 +314,7 @@ const HistoryInput = ({
         />
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="absolute left-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-[var(--text-muted)]"
+          className="absolute left-4 top-1/2 -translate-y-1/2 p-1 hover:bg-[var(--bg-main)] rounded-full transition-colors text-[var(--text-muted)]"
         >
           <ChevronDown className={cn("w-5 h-5 transition-transform", isOpen && "rotate-180")} />
         </button>
@@ -335,7 +335,7 @@ const HistoryInput = ({
                   onChange(item);
                   setIsOpen(false);
                 }}
-                className="w-full text-right px-6 py-3 text-sm font-bold text-[var(--text-main)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-[var(--border-color)] last:border-none"
+                className="w-full text-right px-6 py-3 text-sm font-bold text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors border-b border-[var(--border-color)] last:border-none"
               >
                 {item}
               </button>
@@ -1447,7 +1447,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             onClick={() => setActiveWishlistTab('general')}
             className={cn(
               "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
-              activeWishlistTab === 'general' ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+              activeWishlistTab === 'general' ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
             )}
           >
             گشتی
@@ -1456,7 +1456,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             onClick={() => setActiveWishlistTab('private')}
             className={cn(
               "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
-              activeWishlistTab === 'private' ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+              activeWishlistTab === 'private' ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
             )}
           >
             تایبەت
@@ -1476,12 +1476,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         onClick={() => toggleItemStatus(item.id, !item.completed)}
                         className={cn(
                           "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                          item.completed ? "bg-green-500 border-green-500 text-white" : "border-slate-300 hover:border-green-500"
+                          item.completed ? "bg-green-500 border-green-500 text-white" : "border-[var(--border-color)] hover:border-green-500"
                         )}
                       >
                         {item.completed && <CheckCircle2 className="w-4 h-4" />}
                       </button>
-                      <h3 className={cn("font-black text-lg", item.completed ? "line-through text-slate-500" : "text-[var(--text-main)]")}>
+                      <h3 className={cn("font-black text-lg", item.completed ? "line-through text-[var(--text-muted)]" : "text-[var(--text-main)]")}>
                         {item.title}
                       </h3>
                     </div>
@@ -1547,11 +1547,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
         <div className="space-y-4">
           {(data.debts || []).map(debt => (
-            <Card key={debt.id} className={cn("transition-all", debt.completed && "opacity-60 bg-slate-50")}>
+            <Card key={debt.id} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <h4 className={cn("font-bold text-lg", debt.completed && "line-through text-slate-500")}>{debt.personName}</h4>
-                  <p className="text-sm text-slate-500">{debt.notes}</p>
+                  <h4 className={cn("font-bold text-lg", debt.completed && "line-through text-[var(--text-muted)]")}>{debt.personName}</h4>
+                  <p className="text-sm text-[var(--text-muted)]">{debt.notes}</p>
                   <p className={cn("text-lg font-black mt-1", debt.type === 'owed' ? 'text-red-600' : 'text-green-600')}>{debt.amount.toLocaleString()} د.ع</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1559,10 +1559,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     setEditingDebtId(debt.id);
                     setNewDebt(debt);
                     setShowDebtModal(true);
-                  }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                  }} className="p-2 text-[var(--text-muted)] hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => deleteItem(debt.id, 'debts')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                  <button onClick={() => deleteItem(debt.id, 'debts')} className="p-2 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -1601,22 +1601,22 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <button onClick={() => {
                       setWithdrawGoalId(goal.id);
                       setShowWithdrawModal(true);
-                    }} className="p-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-colors" title="ڕاکێشانی پارە">
+                    }} className="p-2 text-[var(--text-muted)] hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-xl transition-colors" title="ڕاکێشانی پارە">
                       <ArrowDownToLine className="w-4 h-4" />
                     </button>
                     <button onClick={() => {
                       setEditingSavingsId(goal.id);
                       setNewSavings(goal);
                       setShowSavingsModal(true);
-                    }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                    }} className="p-2 text-[var(--text-muted)] hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => deleteItem(goal.id, 'savingsGoals')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                    <button onClick={() => deleteItem(goal.id, 'savingsGoals')} className="p-2 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+                <div className="w-full bg-[var(--bg-main)] rounded-full h-4 overflow-hidden">
                   <div className={cn("h-full transition-all duration-500", progress >= 100 ? "bg-green-500" : "bg-red-500")} style={{ width: `${Math.min(progress, 100)}%` }} />
                 </div>
                 <div className="flex justify-between text-sm font-bold">
@@ -1629,7 +1629,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <FormattedNumberInput 
                         value={quickAddAmounts[goal.id] || ''} 
                         onChange={val => setQuickAddAmounts(p => ({ ...p, [goal.id]: val }))} 
-                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" 
+                        className="w-full px-4 py-2 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" 
                         placeholder="بڕی پارە زیاد بکە..." 
                       />
                     </div>
@@ -1643,7 +1643,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </div>
                 )}
                 {goal.currentAmount < goal.targetAmount && (
-                  <div className="text-xs text-slate-500 font-bold text-center">
+                  <div className="text-xs text-[var(--text-muted)] font-bold text-center">
                     ماوە بۆ تەواوبوون: {(goal.targetAmount - goal.currentAmount).toLocaleString()} د.ع
                   </div>
                 )}
@@ -1704,7 +1704,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
         <Card className="bg-[var(--bg-card)] border-[var(--border-color)]">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-slate-800">ئاماری خەرجی</h3>
+            <h3 className="font-black text-[var(--text-main)]">ئاماری خەرجی</h3>
             <Badge variant="info">٧ رۆژ</Badge>
           </div>
           <div className="h-40 w-full">
@@ -1725,15 +1725,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="mt-4 flex flex-wrap gap-4 justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-xs font-bold text-slate-500">خەرجی</span>
+              <span className="text-xs font-bold text-[var(--text-muted)]">خەرجی</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-blue-600" />
-              <span className="text-xs font-bold text-slate-500">داهات</span>
+              <span className="text-xs font-bold text-[var(--text-muted)]">داهات</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-amber-500" />
-              <span className="text-xs font-bold text-slate-500">پاشەکەوت</span>
+              <span className="text-xs font-bold text-[var(--text-muted)]">پاشەکەوت</span>
             </div>
           </div>
         </Card>
@@ -1742,10 +1742,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: Fuel, label: 'بەنزین', color: 'bg-red-50 text-red-600' },
-          { icon: ShoppingCart, label: 'مارکێت', color: 'bg-green-50 text-green-600' },
-          { icon: Zap, label: 'کارەبا', color: 'bg-amber-50 text-amber-600' },
-          { icon: User, label: 'خەرجی تر', color: 'bg-slate-50 text-slate-600' },
+          { icon: Fuel, label: 'بەنزین', color: 'bg-red-50 dark:bg-red-900/20 text-red-600' },
+          { icon: ShoppingCart, label: 'مارکێت', color: 'bg-green-50 dark:bg-green-900/20 text-green-600' },
+          { icon: Zap, label: 'کارەبا', color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' },
+          { icon: User, label: 'خەرجی تر', color: 'bg-[var(--bg-main)] text-[var(--text-muted)]' },
         ].map((action, i) => (
           <button 
             key={i} 
@@ -1763,7 +1763,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <div className={cn("p-3 rounded-2xl transition-transform group-hover:scale-110", action.color)}>
               <action.icon className="w-6 h-6" />
             </div>
-            <span className="font-bold text-sm text-slate-700">{action.label}</span>
+            <span className="font-bold text-sm text-[var(--text-main)]">{action.label}</span>
           </button>
         ))}
       </div>
@@ -1776,7 +1776,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <button onClick={exportToPDF} className="flex items-center justify-center gap-2 p-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all active:scale-95">
               <AlertCircle className="w-5 h-5" /> PDF
             </button>
-            <button onClick={handlePrint} className="flex items-center justify-center gap-2 p-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all active:scale-95">
+            <button onClick={handlePrint} className="flex items-center justify-center gap-2 p-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-900 transition-all active:scale-95">
               <Clock className="w-5 h-5" /> Print
             </button>
           </div>
@@ -1803,20 +1803,20 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="space-y-3">
             {data.tasks.filter(t => isToday(parseISO(t.date)) && !t.completed).length === 0 ? (
               <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
-                <p className="text-slate-400 font-medium">هیچ ئیشێکی ماوە نییە بۆ ئەمڕۆ</p>
+                <p className="text-[var(--text-muted)] font-medium">هیچ ئیشێکی ماوە نییە بۆ ئەمڕۆ</p>
               </div>
             ) : (
               data.tasks.filter(t => isToday(parseISO(t.date)) && !t.completed).slice(0, 4).map(task => (
                 <div key={task.id} className="group bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4 hover:border-blue-200 transition-all">
-                  <button onClick={() => toggleTask(task.id)} className="text-slate-300 hover:text-blue-600 transition-colors">
+                  <button onClick={() => toggleTask(task.id)} className="text-[var(--text-muted)] hover:text-blue-600 transition-colors">
                     <Circle className="w-6 h-6" />
                   </button>
                   <div className="flex-1">
-                    <h4 className="font-bold text-slate-800">{task.title}</h4>
+                    <h4 className="font-bold text-[var(--text-main)]">{task.title}</h4>
                     <div className="mt-1 space-y-0.5">
                       {(task.details || []).map((d, i) => (
-                        <p key={i} className="text-[10px] text-slate-500">
-                          <span className="font-black text-slate-600">{d.subject}:</span> {d.work}
+                        <p key={i} className="text-[10px] text-[var(--text-muted)]">
+                          <span className="font-black text-[var(--text-muted)]">{d.subject}:</span> {d.work}
                         </p>
                       ))}
                     </div>
@@ -1843,16 +1843,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               <div key={t.id} className="bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4">
                 <div className={cn(
                   "p-2.5 rounded-2xl",
-                  t.type === 'income' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                  t.type === 'income' ? "bg-green-50 dark:bg-green-900/20 text-green-600" : "bg-red-50 dark:bg-red-900/20 text-red-600"
                 )}>
                   {t.type === 'income' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-slate-800">{t.description}</h4>
+                  <h4 className="font-bold text-[var(--text-main)]">{t.description}</h4>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{t.category === 'work' ? 'کارگە' : 'تایبەت'}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-200" />
-                    <span className="text-[10px] font-bold text-slate-400">{format(parseISO(t.date), 'MMM d')}</span>
+                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t.category === 'work' ? 'کارگە' : 'تایبەت'}</span>
+                    <span className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
+                    <span className="text-[10px] font-bold text-[var(--text-muted)]">{format(parseISO(t.date), 'MMM d')}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1879,7 +1879,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       </div>
 
       <div className="relative">
-        <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+        <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
         <input 
           type="text" 
           placeholder="گەڕان لە ئیشەکان..." 
@@ -1903,39 +1903,39 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             if (searchQuery) return null;
             return (
               <div key={period} className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckSquare className="w-8 h-8 text-slate-300" />
+                <div className="w-16 h-16 bg-[var(--bg-main)] rounded-full flex items-center justify-center mb-4">
+                  <CheckSquare className="w-8 h-8 text-[var(--text-muted)]" />
                 </div>
-                <h3 className="text-lg font-black text-slate-400">{period} هیچ ئیشێک نییە</h3>
+                <h3 className="text-lg font-black text-[var(--text-muted)]">{period} هیچ ئیشێک نییە</h3>
               </div>
             );
           }
 
           return (
             <div key={period} className="space-y-4">
-              <h3 className="text-lg font-black text-slate-400 mr-2">{period}</h3>
+              <h3 className="text-lg font-black text-[var(--text-muted)] mr-2">{period}</h3>
               <div className="grid grid-cols-1 gap-4">
                 {filteredTasks.map(task => (
                   <Card key={task.id} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
                     <div className="flex items-center gap-5">
                       <button onClick={() => toggleTask(task.id)} className={cn(
                         "transition-all transform active:scale-90",
-                        task.completed ? "text-green-500" : "text-slate-200 hover:text-blue-600"
+                        task.completed ? "text-green-500" : "text-[var(--text-muted)] hover:text-blue-600"
                       )}>
                         {task.completed ? <CheckCircle2 className="w-8 h-8" /> : <Circle className="w-8 h-8" />}
                       </button>
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
                           {(task.workTypes || []).map((wt, i) => (
-                            <span key={i} className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                            <span key={i} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
-                        <h4 className={cn("font-black text-xl text-slate-800", task.completed && "line-through")}>{task.title}</h4>
+                        <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
                         <div className="mt-2 space-y-1">
                           {(task.details || []).map((d, i) => (
-                            <div key={i} className="bg-slate-50 p-2 rounded-xl border border-slate-100/50">
-                              <p className="text-xs font-black text-slate-600">{d.subject}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{d.work}</p>
+                            <div key={i} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                              <p className="text-xs font-black text-[var(--text-muted)]">{d.subject}</p>
+                              <p className="text-xs text-[var(--text-muted)] mt-0.5">{d.work}</p>
                             </div>
                           ))}
                         </div>
@@ -1950,15 +1950,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             <span className={cn(
                               "text-xs font-black flex items-center gap-1 px-2 py-1 rounded-lg",
                               !task.completed && isPast(parseISO(task.dueDate)) && !isToday(parseISO(task.dueDate))
-                                ? "bg-red-50 text-red-600" 
-                                : "bg-slate-100 text-slate-500"
+                                ? "bg-red-50 dark:bg-red-900/20 text-red-600" 
+                                : "bg-[var(--bg-main)] text-[var(--text-muted)]"
                             )}>
                               <Clock className="w-3 h-3" /> 
                               کاتی کۆتایی: {format(parseISO(task.dueDate), 'yyyy/MM/dd')}
                               {!task.completed && isPast(parseISO(task.dueDate)) && !isToday(parseISO(task.dueDate)) && " (دواکەوتووە!)"}
                             </span>
                           )}
-                          <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                          <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1">
                             <Calendar className="w-3 h-3" /> {format(parseISO(task.date), 'yyyy/MM/dd')}
                           </span>
                         </div>
@@ -1970,11 +1970,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             setEditingTaskId(task.id);
                             setShowTaskModal(true);
                           }} 
-                          className="p-3 text-slate-300 hover:text-blue-500 transition-colors"
+                          className="p-3 text-[var(--text-muted)] hover:text-blue-500 transition-colors"
                         >
                           <Edit2 className="w-6 h-6" />
                         </button>
-                        <button onClick={() => deleteItem(task.id, 'task')} className="p-3 text-slate-200 hover:text-red-500 transition-colors">
+                        <button onClick={() => deleteItem(task.id, 'task')} className="p-3 text-[var(--text-muted)] hover:text-red-500 transition-colors">
                           <Trash2 className="w-6 h-6" />
                         </button>
                       </div>
@@ -2034,7 +2034,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 onClick={() => setFinanceFilter(f.id as any)}
                 className={cn(
                   "px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
-                  financeFilter === f.id ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-slate-500 hover:bg-slate-50"
+                  financeFilter === f.id ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
                 )}
               >
                 {f.label}
@@ -2058,14 +2058,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   }
                 }}
               />
-              <p className="text-[10px] text-slate-400 font-bold">ئینتەر دابگرە بۆ زیادکردن</p>
+              <p className="text-[10px] text-[var(--text-muted)] font-bold">ئینتەر دابگرە بۆ زیادکردن</p>
             </div>
           )}
           
           {category === 'personal' && (data.descriptions || []).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {(data.descriptions || []).map((cat, idx) => (
-                <div key={idx} className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 group relative">
+                <div key={idx} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
                   {editingDescription?.index === idx ? (
                     <input 
                       autoFocus
@@ -2087,7 +2087,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   ) : (
                     <span onClick={() => setEditingDescription({ index: idx, value: cat })} className="cursor-pointer hover:text-blue-600">{cat}</span>
                   )}
-                  <button onClick={() => setData(prev => ({ ...prev, descriptions: (prev.descriptions || []).filter((_, i) => i !== idx) }))} className="text-slate-400 hover:text-red-500">
+                  <button onClick={() => setData(prev => ({ ...prev, descriptions: (prev.descriptions || []).filter((_, i) => i !== idx) }))} className="text-[var(--text-muted)] hover:text-red-500">
                     <Plus className="w-3 h-3 rotate-45" />
                   </button>
                 </div>
@@ -2097,21 +2097,21 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-green-50 border-green-100">
-            <p className="text-green-600 font-bold text-sm">کۆی داهات</p>
-            <h3 className="text-2xl font-black text-green-700 mt-1">
+          <Card className="bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30">
+            <p className="text-green-600 dark:text-green-400 font-bold text-sm">کۆی داهات</p>
+            <h3 className="text-2xl font-black text-green-700 dark:text-green-300 mt-1">
               {data.transactions.filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
             </h3>
           </Card>
-          <Card className="bg-red-50 border-red-100">
-            <p className="text-red-600 font-bold text-sm">کۆی خەرجی</p>
-            <h3 className="text-2xl font-black text-red-700 mt-1">
+          <Card className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30">
+            <p className="text-red-600 dark:text-red-400 font-bold text-sm">کۆی خەرجی</p>
+            <h3 className="text-2xl font-black text-red-700 dark:text-red-300 mt-1">
               {data.transactions.filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
             </h3>
           </Card>
-          <Card className="bg-blue-50 border-blue-100">
-            <p className="text-blue-600 font-bold text-sm">باڵانس</p>
-            <h3 className="text-2xl font-black text-blue-700 mt-1">
+          <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
+            <p className="text-blue-600 dark:text-blue-400 font-bold text-sm">باڵانس</p>
+            <h3 className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-1">
               {(data.transactions.filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0) - 
                 data.transactions.filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0)).toLocaleString()}
             </h3>
@@ -2134,52 +2134,52 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="overflow-x-auto">
             <table className="w-full text-right">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-6 py-4 font-black text-slate-500 text-sm">وەسف</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-sm">بڕ</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-sm">شێواز</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-sm">بەروار</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-sm"></th>
+                <tr className="bg-[var(--bg-main)] border-b border-[var(--border-color)]">
+                  <th className="px-6 py-4 font-black text-[var(--text-muted)] text-sm">وەسف</th>
+                  <th className="px-6 py-4 font-black text-[var(--text-muted)] text-sm">بڕ</th>
+                  <th className="px-6 py-4 font-black text-[var(--text-muted)] text-sm">شێواز</th>
+                  <th className="px-6 py-4 font-black text-[var(--text-muted)] text-sm">بەروار</th>
+                  <th className="px-6 py-4 font-black text-[var(--text-muted)] text-sm"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-[var(--border-color)]">
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                          <Wallet className="w-8 h-8 text-slate-200" />
+                        <div className="w-16 h-16 bg-[var(--bg-main)] rounded-full flex items-center justify-center mb-4">
+                          <Wallet className="w-8 h-8 text-[var(--text-muted)]" />
                         </div>
-                        <h3 className="text-lg font-black text-slate-400">هیچ تۆمارێک نەدۆزرایەوە</h3>
+                        <h3 className="text-lg font-black text-[var(--text-muted)]">هیچ تۆمارێک نەدۆزرایەوە</h3>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   filteredTransactions.map(t => (
-                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={t.id} className="hover:bg-[var(--bg-main)] transition-colors">
                     <td className="px-6 py-6">
-                      <p className="font-bold text-slate-800 text-lg mb-2">{t.description}</p>
+                      <p className="font-bold text-[var(--text-main)] text-lg mb-2">{t.description}</p>
                       <div className="flex flex-wrap gap-2">
-                        {t.subCategory && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">{t.subCategory}</span>}
-                        {t.milkQuantity ? <span className="text-[11px] font-bold text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded-lg">{t.milkQuantity} لیتر شیر</span> : null}
-                        {t.fuelLiters ? <span className="text-[11px] font-bold text-red-600 uppercase bg-red-50 px-2 py-1 rounded-lg">{t.fuelLiters} لیتر {t.fuelType}</span> : null}
-                        {t.fuelPricePerLiter ? <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">نرخی لیتر: {t.fuelPricePerLiter.toLocaleString()}</span> : null}
-                        {t.category === 'work' && t.maintenanceType && <span className="text-[11px] font-bold text-amber-700 uppercase bg-amber-50 px-2 py-1 rounded-lg">{t.maintenanceType}</span>}
-                        {t.workLocation && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">شوێن: {t.workLocation}</span>}
-                        {t.shopName && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">ناوی شوێن: {t.shopName}</span>}
-                        {t.itemsBought && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">پێداویستی: {t.itemsBought}</span>}
-                        {t.customerName && <span className="text-[11px] font-bold text-blue-700 uppercase bg-blue-50 px-2 py-1 rounded-lg">کڕیار: {t.customerName}</span>}
-                        {t.invoiceNumber && <span className="text-[11px] font-bold text-indigo-700 uppercase bg-indigo-50 px-2 py-1 rounded-lg">قایمە: {t.invoiceNumber}</span>}
-                        {t.driverName && <span className="text-[11px] font-bold text-slate-600 uppercase bg-slate-100 px-2 py-1 rounded-lg">سایەق: {t.driverName}</span>}
-                        {t.discount ? <span className="text-[11px] font-bold text-orange-600 uppercase bg-orange-50 px-2 py-1 rounded-lg">داشکاندن: {t.discount.toLocaleString()}</span> : null}
-                        {t.paidAmount ? <span className="text-[11px] font-bold text-emerald-700 uppercase bg-emerald-50 px-2 py-1 rounded-lg">وەرگیراو: {t.paidAmount.toLocaleString()}</span> : null}
-                        {t.remainingAmount ? <span className="text-[11px] font-bold text-blue-700 uppercase bg-blue-50 px-2 py-1 rounded-lg">ماوە: {t.remainingAmount.toLocaleString()}</span> : null}
-                        {t.debtAmount ? <span className="text-[11px] font-bold text-red-700 uppercase bg-red-50 px-2 py-1 rounded-lg">قەرز: {t.debtAmount.toLocaleString()}</span> : null}
+                        {t.subCategory && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">{t.subCategory}</span>}
+                        {t.milkQuantity ? <span className="text-[11px] font-bold text-blue-600 uppercase bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">{t.milkQuantity} لیتر شیر</span> : null}
+                        {t.fuelLiters ? <span className="text-[11px] font-bold text-red-600 uppercase bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">{t.fuelLiters} لیتر {t.fuelType}</span> : null}
+                        {t.fuelPricePerLiter ? <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">نرخی لیتر: {t.fuelPricePerLiter.toLocaleString()}</span> : null}
+                        {t.category === 'work' && t.maintenanceType && <span className="text-[11px] font-bold text-amber-700 uppercase bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">{t.maintenanceType}</span>}
+                        {t.workLocation && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">شوێن: {t.workLocation}</span>}
+                        {t.shopName && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">ناوی شوێن: {t.shopName}</span>}
+                        {t.itemsBought && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">پێداویستی: {t.itemsBought}</span>}
+                        {t.customerName && <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">کڕیار: {t.customerName}</span>}
+                        {t.invoiceNumber && <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">قایمە: {t.invoiceNumber}</span>}
+                        {t.driverName && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">سایەق: {t.driverName}</span>}
+                        {t.discount ? <span className="text-[11px] font-bold text-orange-600 uppercase bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">داشکاندن: {t.discount.toLocaleString()}</span> : null}
+                        {t.paidAmount ? <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">وەرگیراو: {t.paidAmount.toLocaleString()}</span> : null}
+                        {t.remainingAmount ? <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">ماوە: {t.remainingAmount.toLocaleString()}</span> : null}
+                        {t.debtAmount ? <span className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">قەرز: {t.debtAmount.toLocaleString()}</span> : null}
                         {t.receiptImage && (
                           <div className="w-full mt-3">
                             <button 
                               onClick={() => setSelectedImage(t.receiptImage)}
-                              className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-100 hover:border-blue-500 transition-all group shadow-sm"
+                              className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-[var(--border-color)] hover:border-blue-500 transition-all group shadow-sm"
                             >
                               <img src={t.receiptImage} alt="Receipt" className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -2191,7 +2191,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.receiptItems && t.receiptItems.length > 0 && (
                           <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={i} className="flex justify-between text-[11px] font-medium text-slate-600 bg-slate-50/80 px-3 py-1.5 rounded-lg border border-slate-100">
+                              <div key={i} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
                                 <span>{item.name}</span>
                                 <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
@@ -2210,12 +2210,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.paymentMethod === 'own_money' ? 'پارەی خۆم' : t.paymentMethod === 'factory_money' ? 'پارەی کارگە' : 'کاش'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-5 text-sm font-bold text-slate-400">{format(parseISO(t.date), 'yyyy/MM/dd')}</td>
+                    <td className="px-6 py-5 text-sm font-bold text-[var(--text-muted)]">{format(parseISO(t.date), 'yyyy/MM/dd')}</td>
                     <td className="px-6 py-5">
                       <div className="flex gap-2 justify-end">
                         <button 
                           onClick={() => handleShareTransaction(t)}
-                          className="text-slate-300 hover:text-green-500 transition-colors"
+                          className="text-[var(--text-muted)] hover:text-green-500 transition-colors"
                           title="ناردن بۆ محاسب"
                         >
                           <Share2 className="w-5 h-5" />
@@ -2226,11 +2226,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             setEditingTransactionId(t.id);
                             setShowTransactionModal(true);
                           }} 
-                          className="text-slate-300 hover:text-blue-500 transition-colors"
+                          className="text-[var(--text-muted)] hover:text-blue-500 transition-colors"
                         >
                           <Edit2 className="w-5 h-5" />
                         </button>
-                        <button onClick={() => deleteItem(t.id, 'transaction')} className="text-slate-200 hover:text-red-500 transition-colors">
+                        <button onClick={() => deleteItem(t.id, 'transaction')} className="text-[var(--text-muted)] hover:text-red-500 transition-colors">
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
@@ -2386,7 +2386,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               >
                 <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center">
                   <h2 className="text-2xl font-black text-[var(--text-main)]">لیستی بەشەکان</h2>
-                  <button onClick={() => setShowSidebar(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                  <button onClick={() => setShowSidebar(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors">
                     <X className="w-6 h-6 text-[var(--text-muted)]" />
                   </button>
                 </div>
@@ -2409,7 +2409,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         "w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-bold transition-all",
                         activeTab === tab.id 
                           ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" 
-                          : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[var(--text-main)]"
+                          : "text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]"
                       )}
                     >
                       <tab.icon className="w-6 h-6" />
@@ -2452,14 +2452,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowTaskModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden">
-              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]">
                 <h3 className="text-2xl font-black text-[var(--text-main)]">ئیشی نوێ</h3>
-                <button onClick={() => setShowTaskModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowTaskModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
                 {/* Work Types Selection */}
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-slate-500 mr-1">جۆری ئیش (دەتوانی چەند دانەیەک هەڵبژێریت)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">جۆری ئیش (دەتوانی چەند دانەیەک هەڵبژێریت)</label>
                   <div className="grid grid-cols-2 gap-2">
                     {['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].map(type => (
                       <button
@@ -2524,7 +2524,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                               }));
                             }
                           }}
-                          className="outline-none focus:bg-slate-100 dark:focus:bg-slate-800 px-1 rounded"
+                          className="outline-none focus:bg-[var(--bg-main)] px-1 rounded"
                         >
                           {t}
                         </span>
@@ -2537,7 +2537,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">ناونیشانی ئیشەکە</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ناونیشانی ئیشەکە</label>
                   <HistoryInput 
                     value={newTask.title || ''} 
                     onChange={val => setNewTask(p => ({ ...p, title: val }))} 
@@ -2551,14 +2551,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-black text-slate-500 mr-1">بابەت و کارەکان</label>
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">بابەت و کارەکان</label>
                   </div>
                   
                   <div className="space-y-3">
                     {(newTask.details || [{ subject: '', work: '' }]).map((detail, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
                         <div className="col-span-5 space-y-1">
-                          <label className="text-[10px] font-bold text-slate-400">بابەت</label>
+                          <label className="text-[10px] font-bold text-[var(--text-muted)]">بابەت</label>
                           <HistoryInput 
                             value={detail.subject} 
                             onChange={val => {
@@ -2574,7 +2574,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                           />
                         </div>
                         <div className="col-span-6 space-y-1">
-                          <label className="text-[10px] font-bold text-slate-400">چ کارێکە؟</label>
+                          <label className="text-[10px] font-bold text-[var(--text-muted)]">چ کارێکە؟</label>
                           <HistoryInput 
                             value={detail.work} 
                             onChange={val => {
@@ -2613,16 +2613,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">بەروار</label>
-                    <input type="date" value={newTask.date || ''} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" />
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">بەروار</label>
+                    <input type="date" value={newTask.date || ''} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} className="w-full px-4 py-3 bg-[var(--bg-main)] dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">کاتی کۆتایی</label>
-                    <input type="date" value={newTask.dueDate || ''} onChange={e => setNewTask(p => ({ ...p, dueDate: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" />
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">کاتی کۆتایی</label>
+                    <input type="date" value={newTask.dueDate || ''} onChange={e => setNewTask(p => ({ ...p, dueDate: e.target.value }))} className="w-full px-4 py-3 bg-[var(--bg-main)] dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">گرنگی</label>
-                    <select value={newTask.priority || 'low'} onChange={e => setNewTask(p => ({ ...p, priority: e.target.value as any }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold appearance-none text-sm text-[var(--text-main)]">
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">گرنگی</label>
+                    <select value={newTask.priority || 'low'} onChange={e => setNewTask(p => ({ ...p, priority: e.target.value as any }))} className="w-full px-4 py-3 bg-[var(--bg-main)] dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold appearance-none text-sm text-[var(--text-main)]">
                       <option value="low">ئاسایی</option>
                       <option value="medium">ناوەند</option>
                       <option value="high">گرنگ</option>
@@ -2643,7 +2643,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               sessionStorage.removeItem('show_transaction_modal');
             }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
-              <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+              <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-black text-[var(--text-main)]">تۆماری دارایی</h3>
                   <button 
@@ -2658,17 +2658,17 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   setShowTransactionModal(false);
                   sessionStorage.removeItem('pending_transaction');
                   sessionStorage.removeItem('show_transaction_modal');
-                }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+                }} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="p-6 space-y-6 overflow-y-auto kurdish-font">
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl shrink-0">
-                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'income' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'income' ? "bg-[var(--bg-card)] text-green-600 shadow-sm" : "text-slate-400")}>داهات</button>
-                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'expense' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'expense' ? "bg-[var(--bg-card)] text-red-600 shadow-sm" : "text-slate-400")}>خەرجی</button>
-                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'savings' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'savings' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-slate-400")}>هەڵگرتن</button>
+                <div className="flex bg-[var(--bg-main)] p-1.5 rounded-2xl shrink-0">
+                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'income' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'income' ? "bg-[var(--bg-card)] text-green-600 shadow-sm" : "text-[var(--text-muted)]")}>داهات</button>
+                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'expense' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'expense' ? "bg-[var(--bg-card)] text-red-600 shadow-sm" : "text-[var(--text-muted)]")}>خەرجی</button>
+                  <button onClick={() => setNewTransaction(p => ({ ...p, type: 'savings' }))} className={cn("flex-1 py-3 rounded-xl font-black transition-all", newTransaction.type === 'savings' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-[var(--text-muted)]")}>هەڵگرتن</button>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">وەسف</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">وەسف</label>
                   <HistoryInput 
                     value={newTransaction.description || ''} 
                     onChange={val => setNewTransaction(p => ({ ...p, description: val }))} 
@@ -2683,7 +2683,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         <button 
                           key={i}
                           onClick={() => setNewTransaction(p => ({ ...p, description: d }))}
-                          className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-lg transition-colors text-[var(--text-main)]"
+                          className="text-[10px] font-bold bg-[var(--bg-main)] hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-lg transition-colors text-[var(--text-main)]"
                         >
                           {d}
                         </button>
@@ -2693,13 +2693,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 </div>
 
                 <div className={cn("space-y-2", (!['بەنزین'].includes(newTransaction.description || '') && newTransaction.type === 'expense') && "hidden")}>
-                  <label className="text-sm font-black text-slate-500 mr-1">بڕ (دینار)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بڕ (دینار)</label>
                   <FormattedNumberInput 
                     value={newTransaction.description === 'بەنزین' ? (Number(newTransaction.fuelLiters || 0) * Number(newTransaction.fuelPricePerLiter || 0)) : (newTransaction.amount || '')} 
                     onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
                     disabled={newTransaction.description === 'بەنزین'}
                     className={cn(
-                      "w-full px-6 py-6 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-black text-3xl text-center text-[var(--text-main)]",
+                      "w-full px-6 py-6 bg-[var(--bg-main)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-black text-3xl text-center text-[var(--text-main)]",
                       newTransaction.description === 'بەنزین' && "opacity-50"
                     )} 
                     placeholder="0"
@@ -2711,23 +2711,23 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 {newTransaction.type === 'savings' && (
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">کاریگەری لەسەر کۆی گشتی باڵانس</label>
-                    <div className="flex bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl">
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">کاریگەری لەسەر کۆی گشتی باڵانس</label>
+                    <div className="flex bg-[var(--bg-main)] p-1.5 rounded-2xl">
                       <button 
                         onClick={() => setNewTransaction(p => ({ ...p, savingsEffect: 'none' }))} 
-                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", (newTransaction.savingsEffect === 'none' || !newTransaction.savingsEffect) ? "bg-[var(--bg-card)] text-slate-800 shadow-sm" : "text-slate-400")}
+                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", (newTransaction.savingsEffect === 'none' || !newTransaction.savingsEffect) ? "bg-[var(--bg-card)] text-[var(--text-main)] shadow-sm" : "text-[var(--text-muted)]")}
                       >
                         بێ کاریگەر
                       </button>
                       <button 
                         onClick={() => setNewTransaction(p => ({ ...p, savingsEffect: 'subtract' }))} 
-                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", newTransaction.savingsEffect === 'subtract' ? "bg-[var(--bg-card)] text-red-600 shadow-sm" : "text-slate-400")}
+                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", newTransaction.savingsEffect === 'subtract' ? "bg-[var(--bg-card)] text-red-600 shadow-sm" : "text-[var(--text-muted)]")}
                       >
                         کەمکردن
                       </button>
                       <button 
                         onClick={() => setNewTransaction(p => ({ ...p, savingsEffect: 'add' }))} 
-                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", newTransaction.savingsEffect === 'add' ? "bg-[var(--bg-card)] text-green-600 shadow-sm" : "text-slate-400")}
+                        className={cn("flex-1 py-3 rounded-xl font-bold text-sm transition-all", newTransaction.savingsEffect === 'add' ? "bg-[var(--bg-card)] text-green-600 shadow-sm" : "text-[var(--text-muted)]")}
                       >
                         زیادکردن
                       </button>
@@ -2737,10 +2737,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 {/* Specific Fields for Delivery/Driver */}
                 {newTransaction.description === 'سایەقی' && (
-                  <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-3xl border border-slate-100 dark:border-slate-700/50">
+                  <div className="space-y-4 bg-[var(--bg-main)] p-5 rounded-3xl border border-[var(--border-color)]">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">ناوی کڕیار</label>
+                        <label className="text-[11px] font-bold text-[var(--text-muted)] mr-1">ناوی کڕیار</label>
                         <HistoryInput 
                           value={newTransaction.customerName || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, customerName: val }))} 
@@ -2752,7 +2752,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">ژمارەی قایمە</label>
+                        <label className="text-[11px] font-bold text-[var(--text-muted)] mr-1">ژمارەی قایمە</label>
                         <input 
                           type="text" 
                           value={newTransaction.invoiceNumber || ''} 
@@ -2763,7 +2763,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">ناوی سایەق</label>
+                      <label className="text-[11px] font-bold text-[var(--text-muted)] mr-1">ناوی سایەق</label>
                       <HistoryInput 
                         value={newTransaction.driverName || ''} 
                         onChange={val => setNewTransaction(p => ({ ...p, driverName: val }))} 
@@ -2777,7 +2777,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">کۆی گشتی (دینار)</label>
+                        <label className="text-[11px] font-bold text-[var(--text-muted)] mr-1">کۆی گشتی (دینار)</label>
                         <FormattedNumberInput 
                           value={newTransaction.amount || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
@@ -2785,7 +2785,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">داشکاندن</label>
+                        <label className="text-[11px] font-bold text-[var(--text-muted)] mr-1">داشکاندن</label>
                         <FormattedNumberInput 
                           value={newTransaction.discount || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, discount: val }))} 
@@ -2796,7 +2796,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">وەرگیراو (پارەی دراو)</label>
+                        <label className="text-[11px] font-bold text-[var(--text-muted)] mr-1">وەرگیراو (پارەی دراو)</label>
                         <FormattedNumberInput 
                           value={newTransaction.paidAmount || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, paidAmount: val }))} 
@@ -2804,7 +2804,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">ماوە</label>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">ماوە</label>
                         <FormattedNumberInput 
                           value={newTransaction.remainingAmount || (Number(newTransaction.amount || 0) - Number(newTransaction.discount || 0) - Number(newTransaction.paidAmount || 0))} 
                           onChange={val => setNewTransaction(p => ({ ...p, remainingAmount: val }))} 
@@ -2814,7 +2814,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-500 mr-1">قەرز</label>
+                      <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">قەرز</label>
                       <FormattedNumberInput 
                         value={newTransaction.debtAmount || ''} 
                         onChange={val => setNewTransaction(p => ({ ...p, debtAmount: val }))} 
@@ -2824,10 +2824,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                     {newTransaction.receiptItems && newTransaction.receiptItems.length > 0 && (
                       <div className="mt-4 space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">بابەتەکان</label>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەتەکان</label>
                         <div className="bg-[var(--bg-card)] rounded-xl overflow-hidden border border-[var(--border-color)]">
                           <table className="w-full text-[10px]">
-                            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+                            <thead className="bg-[var(--bg-main)] text-[var(--text-muted)]">
                               <tr>
                                 <th className="px-3 py-2 text-right">بابەت</th>
                                 <th className="px-3 py-2 text-center">عدد</th>
@@ -2851,7 +2851,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     )}
                     
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-500 mr-1">بڕ (دینار)</label>
+                      <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بڕ (دینار)</label>
                       <FormattedNumberInput 
                         value={newTransaction.amount || ''} 
                         onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
@@ -2862,16 +2862,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                     {/* Camera Capture */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 mr-1">وێنەی وەسڵ</label>
+                      <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">وێنەی وەسڵ</label>
                       <div className="flex gap-2">
-                        <label className="flex-1 flex items-center justify-center gap-2 py-4 bg-[var(--bg-card)] border-2 border-dashed border-[var(--border-color)] rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
-                          <Camera className="w-5 h-5 text-slate-400" />
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">گرتنی وێنە</span>
+                        <label className="flex-1 flex items-center justify-center gap-2 py-4 bg-[var(--bg-card)] border-2 border-dashed border-[var(--border-color)] rounded-2xl cursor-pointer hover:bg-[var(--bg-main)] transition-all">
+                          <Camera className="w-5 h-5 text-[var(--text-muted)]" />
+                          <span className="text-xs font-bold text-[var(--text-muted)]">گرتنی وێنە</span>
                           <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageCapture} />
                         </label>
-                        <label className="flex-1 flex items-center justify-center gap-2 py-4 bg-[var(--bg-card)] border-2 border-dashed border-[var(--border-color)] rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
-                          <ImageIcon className="w-5 h-5 text-slate-400" />
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">لە گەلەری</span>
+                        <label className="flex-1 flex items-center justify-center gap-2 py-4 bg-[var(--bg-card)] border-2 border-dashed border-[var(--border-color)] rounded-2xl cursor-pointer hover:bg-[var(--bg-main)] transition-all">
+                          <ImageIcon className="w-5 h-5 text-[var(--text-muted)]" />
+                          <span className="text-xs font-bold text-[var(--text-muted)]">لە گەلەری</span>
                           <input type="file" accept="image/*" className="hidden" onChange={handleImageCapture} />
                         </label>
                       </div>
@@ -2883,7 +2883,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             disabled={isScanning}
                             className={cn(
                               "w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all active:scale-95",
-                              isScanning ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200"
+                              isScanning ? "bg-[var(--bg-main)] text-[var(--text-muted)] cursor-not-allowed" : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200"
                             )}
                           >
                             {isScanning ? (
@@ -2898,7 +2898,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                               </>
                             )}
                           </button>
-                          <div className="relative rounded-2xl overflow-hidden border border-slate-200">
+                          <div className="relative rounded-2xl overflow-hidden border border-[var(--border-color)]">
                             <img src={newTransaction.receiptImage} alt="Receipt" className="w-full h-48 object-cover" />
                             <button 
                               onClick={() => setNewTransaction(p => ({ ...p, receiptImage: '' }))}
@@ -2915,10 +2915,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 {/* Specific Fields for Fuel */}
                 {newTransaction.description === 'بەنزین' && (
-                  <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl">
+                  <div className="space-y-4 bg-[var(--bg-main)] p-5 rounded-2xl">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">بڕی لیتر</label>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بڕی لیتر</label>
                         <FormattedNumberInput 
                           value={newTransaction.fuelLiters || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, fuelLiters: val }))} 
@@ -2926,7 +2926,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">نرخی لیتر</label>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">نرخی لیتر</label>
                         <FormattedNumberInput 
                           value={newTransaction.fuelPricePerLiter || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, fuelPricePerLiter: val }))} 
@@ -2935,7 +2935,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-500 mr-1">جۆری سوتەمەنی</label>
+                      <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">جۆری سوتەمەنی</label>
                       <div className="grid grid-cols-4 gap-1">
                         {['بەنزین', 'گاز', 'خاز', 'نەفت'].map(type => (
                           <button
@@ -2956,9 +2956,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 {/* Specific Fields for General Expense */}
                 {(!['بەنزین'].includes(newTransaction.description || '') && newTransaction.type === 'expense') && (
-                  <div className="space-y-3 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl">
+                  <div className="space-y-3 bg-[var(--bg-main)] p-5 rounded-2xl">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-500 mr-1">ناوی شوێن</label>
+                      <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">ناوی شوێن</label>
                       <HistoryInput 
                         value={newTransaction.shopName || ''} 
                         onChange={val => setNewTransaction(p => ({ ...p, shopName: val }))} 
@@ -2970,12 +2970,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-black text-slate-500 mr-1">وەسڵ (بابەت و نرخ)</label>
+                      <label className="text-sm font-black text-[var(--text-muted)] mr-1">وەسڵ (بابەت و نرخ)</label>
                       <div className="space-y-3">
                         {(newTransaction.receiptItems || []).map((item, index) => (
                           <div key={index} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
                             <div className="flex-1 space-y-1">
-                              <label className="text-[10px] font-black text-slate-400 mr-1">بابەت</label>
+                              <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەت</label>
                               <HistoryInput 
                                 value={item.name || ''} 
                                 onChange={val => {
@@ -2991,7 +2991,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                               />
                             </div>
                             <div className="w-20 space-y-1">
-                              <label className="text-[10px] font-black text-slate-400 mr-1">نرخ</label>
+                              <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">نرخ</label>
                               <FormattedNumberInput 
                                 placeholder="نرخ" 
                                 value={item.unitPrice || item.price || ''} 
@@ -3005,7 +3005,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                               />
                             </div>
                             <div className="w-14 space-y-1">
-                              <label className="text-[10px] font-black text-slate-400 mr-1">دانە</label>
+                              <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">دانە</label>
                               <input 
                                 type="number"
                                 value={item.quantity || 1} 
@@ -3025,7 +3025,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                                   const next = (newTransaction.receiptItems || []).filter((_, i) => i !== index);
                                   setNewTransaction(p => ({ ...p, receiptItems: next }));
                                 }}
-                                className="p-2 text-red-400 hover:bg-red-50 rounded-full"
+                                className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
                               >
                                 <Plus className="w-4 h-4 rotate-45" />
                               </button>
@@ -3035,13 +3035,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         <div className="flex gap-2">
                           <button 
                             onClick={() => setNewTransaction(p => ({ ...p, receiptItems: [...(p.receiptItems || []), { name: '', price: 0 }] }))}
-                            className="flex-1 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 py-3 border-2 border-dashed border-[var(--border-color)] rounded-2xl text-[var(--text-muted)] font-bold text-sm hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
                           >
                             <Plus className="w-4 h-4" /> زیادکردنی بابەت
                           </button>
                           <button 
                             onClick={() => setShowBarcodeScanner(true)}
-                            className="flex-1 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-green-400 hover:text-green-500 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 py-3 border-2 border-dashed border-[var(--border-color)] rounded-2xl text-[var(--text-muted)] font-bold text-sm hover:border-green-400 hover:text-green-500 transition-all flex items-center justify-center gap-2"
                           >
                             <Camera className="w-4 h-4" /> سکانی بارکۆد
                           </button>
@@ -3059,15 +3059,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 )}
                 <div className="grid grid-cols-2 gap-4 shrink-0">
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">شێوازی پارەدان</label>
-                    <select value={newTransaction.paymentMethod || 'cash'} onChange={e => setNewTransaction(p => ({ ...p, paymentMethod: e.target.value as any }))} className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold appearance-none text-[var(--text-main)]">
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">شێوازی پارەدان</label>
+                    <select value={newTransaction.paymentMethod || 'cash'} onChange={e => setNewTransaction(p => ({ ...p, paymentMethod: e.target.value as any }))} className="w-full px-6 py-4 bg-[var(--bg-main)] dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold appearance-none text-[var(--text-main)]">
                       <option value="cash">کاش</option>
                       <option value="own_money">پارەی خۆم</option>
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">بەروار</label>
-                    <input type="date" value={newTransaction.date || ''} onChange={e => setNewTransaction(p => ({ ...p, date: e.target.value }))} className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-[var(--text-main)]" />
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">بەروار</label>
+                    <input type="date" value={newTransaction.date || ''} onChange={e => setNewTransaction(p => ({ ...p, date: e.target.value }))} className="w-full px-6 py-4 bg-[var(--bg-main)] dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-[var(--text-main)]" />
                   </div>
                 </div>
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addTransaction}>تۆمارکردن</Button>
@@ -3079,49 +3079,49 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWishlistModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
-                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl">
                     <ShoppingCart className="w-6 h-6" />
                   </div>
                   {editingWishlistId ? 'دەستکاری پێداویستی' : 'پێداویستی نوێ'}
                 </h3>
-                <button onClick={() => setShowWishlistModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
-                  <Plus className="w-6 h-6 rotate-45 text-slate-500" />
+                <button onClick={() => setShowWishlistModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors">
+                  <Plus className="w-6 h-6 rotate-45 text-[var(--text-muted)]" />
                 </button>
               </div>
               <div className="p-8 space-y-6 overflow-y-auto">
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">ناوی پێداویستی</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ناوی پێداویستی</label>
                   <input 
                     type="text" 
                     placeholder="نموونە: سەرە شەحن، غاز..." 
                     value={newWishlistItem.title || ''} 
                     onChange={e => setNewWishlistItem(p => ({ ...p, title: e.target.value }))} 
-                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-lg text-[var(--text-main)]" 
+                    className="w-full px-6 py-4 bg-[var(--bg-main)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-lg text-[var(--text-main)]" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">تێبینی (ئارەزوومەندانە)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">تێبینی (ئارەزوومەندانە)</label>
                   <textarea 
                     placeholder="هەر زانیارییەکی تر..." 
                     value={newWishlistItem.notes || ''} 
                     onChange={e => setNewWishlistItem(p => ({ ...p, notes: e.target.value }))} 
-                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-[var(--text-main)] resize-none" 
+                    className="w-full px-6 py-4 bg-[var(--bg-main)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-[var(--text-main)] resize-none" 
                     rows={3}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">نرخی خەمڵێنراو (ئارەزوومەندانە)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">نرخی خەمڵێنراو (ئارەزوومەندانە)</label>
                   <div className="relative">
                     <FormattedNumberInput 
                       placeholder="0" 
                       value={newWishlistItem.estimatedPrice || ''} 
                       onChange={val => setNewWishlistItem(p => ({ ...p, estimatedPrice: val }))} 
-                      className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xl text-left text-[var(--text-main)]" 
+                      className="w-full px-6 py-4 bg-[var(--bg-main)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xl text-left text-[var(--text-main)]" 
                       dir="ltr"
                     />
-                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold">د.ع</span>
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-bold">د.ع</span>
                   </div>
                 </div>
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addWishlistItem}>تۆمارکردن</Button>
@@ -3134,12 +3134,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDebtModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
                 <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
                   <CreditCard className="w-8 h-8 text-blue-600" />
                   {editingDebtId ? 'دەستکاری قەرز' : 'قەرزی نوێ'}
                 </h3>
-                <button onClick={() => setShowDebtModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowDebtModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="p-8 space-y-6 overflow-y-auto flex-1">
                 <div className="flex gap-2 bg-[var(--bg-card)] p-1 rounded-2xl border border-[var(--border-color)]">
@@ -3147,7 +3147,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     onClick={() => setNewDebt(p => ({ ...p, type: 'owed' }))}
                     className={cn(
                       "flex-1 py-3 rounded-xl font-bold transition-all",
-                      newDebt.type === 'owed' ? "bg-red-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+                      newDebt.type === 'owed' ? "bg-red-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
                     )}
                   >
                     قەرزارم
@@ -3156,14 +3156,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     onClick={() => setNewDebt(p => ({ ...p, type: 'owing' }))}
                     className={cn(
                       "flex-1 py-3 rounded-xl font-bold transition-all",
-                      newDebt.type === 'owing' ? "bg-green-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-800"
+                      newDebt.type === 'owing' ? "bg-green-600 text-white shadow-md" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
                     )}
                   >
                     قەرزم لایە
                   </button>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">ناوی کەسەکە</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ناوی کەسەکە</label>
                   <HistoryInput 
                     value={newDebt.personName || ''} 
                     onChange={val => setNewDebt(p => ({ ...p, personName: val }))} 
@@ -3174,15 +3174,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">بڕی پارە (دینار)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بڕی پارە (دینار)</label>
                   <FormattedNumberInput value={newDebt.amount || ''} onChange={val => setNewDebt(p => ({ ...p, amount: val }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="0" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">تێبینی (ئارەزوومەندانە)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">تێبینی (ئارەزوومەندانە)</label>
                   <textarea value={newDebt.notes || ''} onChange={e => setNewDebt(p => ({ ...p, notes: e.target.value }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold min-h-[100px]" placeholder="تێبینی..." />
                 </div>
               </div>
-              <div className="p-8 border-t border-[var(--border-color)] bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+              <div className="p-8 border-t border-[var(--border-color)] bg-[var(--bg-main)] shrink-0">
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addDebt}>تۆمارکردن</Button>
               </div>
             </motion.div>
@@ -3193,16 +3193,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWithdrawModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden">
-              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]">
                 <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
                   <ArrowDownToLine className="w-6 h-6 text-yellow-600" />
                   ڕاکێشانی پارە
                 </h3>
-                <button onClick={() => setShowWithdrawModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowWithdrawModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">بڕی پارە (دینار)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بڕی پارە (دینار)</label>
                   <FormattedNumberInput 
                     value={withdrawAmount || ''} 
                     onChange={val => setWithdrawAmount(val)} 
@@ -3251,16 +3251,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setScannedBarcode(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden">
-              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]">
                 <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
                   <ShoppingCart className="w-6 h-6 text-blue-600" />
                   کاڵای نوێ
                 </h3>
-                <button onClick={() => setScannedBarcode(null)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setScannedBarcode(null)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">ناوی کاڵا</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ناوی کاڵا</label>
                   <input 
                     type="text"
                     value={newProduct.name} 
@@ -3271,7 +3271,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">نرخ (دینار)</label>
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">نرخ (دینار)</label>
                     <FormattedNumberInput 
                       value={newProduct.price || ''} 
                       onChange={val => setNewProduct(p => ({ ...p, price: val }))} 
@@ -3280,7 +3280,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-black text-slate-500 mr-1">دانە (عدد)</label>
+                    <label className="text-sm font-black text-[var(--text-muted)] mr-1">دانە (عدد)</label>
                     <input 
                       type="number"
                       value={newProduct.quantity} 
@@ -3300,16 +3300,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSavingsModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
                 <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
                   <PiggyBank className="w-8 h-8 text-green-600" />
                   {editingSavingsId ? 'دەستکاری ئامانج' : 'ئامانجی نوێ'}
                 </h3>
-                <button onClick={() => setShowSavingsModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowSavingsModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="p-8 space-y-6 overflow-y-auto flex-1">
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">ناوی ئامانج</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ناوی ئامانج</label>
                   <HistoryInput 
                     value={newSavings.title || ''} 
                     onChange={val => setNewSavings(p => ({ ...p, title: val }))} 
@@ -3320,15 +3320,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">بڕی ئامانج (دینار)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بڕی ئامانج (دینار)</label>
                   <FormattedNumberInput value={newSavings.targetAmount || ''} onChange={val => setNewSavings(p => ({ ...p, targetAmount: val }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="0" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">بڕی کۆکراوەی ئێستا (دینار)</label>
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بڕی کۆکراوەی ئێستا (دینار)</label>
                   <FormattedNumberInput value={newSavings.currentAmount || ''} onChange={val => setNewSavings(p => ({ ...p, currentAmount: val }))} className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="0" />
                 </div>
               </div>
-              <div className="p-8 border-t border-[var(--border-color)] bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+              <div className="p-8 border-t border-[var(--border-color)] bg-[var(--bg-main)] shrink-0">
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addSavingsGoal}>تۆمارکردن</Button>
               </div>
             </motion.div>
@@ -3343,8 +3343,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   <AlertCircle className="w-10 h-10" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-800">ئایا دڵنیایت؟</h3>
-                  <p className="text-slate-500 font-bold mt-2">هەموو داتاکانی سیستەم بەیەکجار رەشدەکرێنەوە و ناگەڕێنەوە.</p>
+                  <h3 className="text-2xl font-black text-[var(--text-main)]">ئایا دڵنیایت؟</h3>
+                  <p className="text-[var(--text-muted)] font-bold mt-2">هەموو داتاکانی سیستەم بەیەکجار رەشدەکرێنەوە و ناگەڕێنەوە.</p>
                 </div>
                 <div className="flex flex-col gap-3">
                   <Button variant="danger" className="w-full py-4 rounded-2xl text-lg" onClick={resetAllData}>بەڵێ، هەمووی رەش بکەرەوە</Button>
