@@ -50,6 +50,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { BarcodeScanner } from './components/BarcodeScanner';
 import { ReceiptScanner } from './components/ReceiptScanner';
+import { scanReceipt } from './services/geminiService';
+import { resizeImage } from './lib/imageUtils';
 import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isPast } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -451,48 +453,7 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  const resizeImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onerror = (e) => {
-        console.error("Image load error:", e);
-        reject(new Error("شکستی هێنا لە بارکردنی وێنەکە"));
-      };
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxWidth) {
-              height *= maxWidth / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error("نەتوانرا کانڤاس دروست بکرێت"));
-            return;
-          }
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        } catch (err) {
-          console.error("Resize error:", err);
-          reject(err);
-        }
-      };
-    });
-  };
+  // Removed local resizeImage implementation in favor of lib/imageUtils.ts
 
   const handleScanReceipt = async () => {
     if (!newTransaction.receiptImage) return;
@@ -516,8 +477,7 @@ export default function App() {
       console.log(`handleScanReceipt: Image resized. Size: ${Math.round(resizedImage.length / 1024)} KB`);
 
       console.log("handleScanReceipt: Calling scanReceipt service...");
-      // const result = await scanReceipt(resizedImage);
-      const result: any = null;
+      const result = await scanReceipt(resizedImage);
       
       if (!isStillScanning) return; // Already timed out
       
@@ -531,6 +491,7 @@ export default function App() {
           customerName: result.customerName || p.customerName,
           invoiceNumber: result.invoiceNumber || p.invoiceNumber,
           driverName: result.driverName || p.driverName,
+          date: result.date || p.date,
           amount: result.amount || p.amount,
           discount: result.discount || p.discount,
           paidAmount: result.paidAmount || p.paidAmount,

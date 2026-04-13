@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
-import { X, Camera, Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Camera, Upload, Loader2, CheckCircle2, AlertCircle, ImageIcon } from 'lucide-react';
+import { scanReceipt } from '../services/geminiService';
+import { resizeImage } from '../lib/imageUtils';
 
 interface ReceiptScannerProps {
   onScanComplete: (data: any) => void;
@@ -65,73 +66,24 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
     setShowCamera(false);
   };
 
-  const scanReceipt = async () => {
+  const handleScan = async () => {
     if (!image) return;
 
     setIsScanning(true);
     setError(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const base64Data = image.split(',')[1];
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: base64Data,
-              },
-            },
-            {
-              text: `Extract information from this receipt. Return a JSON object with the following fields:
-              - customerName: string (if available)
-              - invoiceNumber: string (if available)
-              - date: string (YYYY-MM-DD format)
-              - items: array of objects { name: string, price: number, quantity: number, unitPrice: number }
-              - totalAmount: number
-              - shopName: string (if available)
-              
-              Translate all text fields to Kurdish (Sorani) if they are in English or Arabic.`,
-            },
-          ],
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              customerName: { type: Type.STRING },
-              invoiceNumber: { type: Type.STRING },
-              date: { type: Type.STRING },
-              items: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    name: { type: Type.STRING },
-                    price: { type: Type.NUMBER },
-                    quantity: { type: Type.NUMBER },
-                    unitPrice: { type: Type.NUMBER },
-                  },
-                  required: ["name", "price"]
-                }
-              },
-              totalAmount: { type: Type.NUMBER },
-              shopName: { type: Type.STRING },
-            },
-            required: ["totalAmount"]
-          }
-        }
-      });
-
-      const result = JSON.parse(response.text || '{}');
-      onScanComplete({ ...result, receiptImage: image });
+      const resizedImage = await resizeImage(image);
+      const result = await scanReceipt(resizedImage);
+      
+      if (result) {
+        onScanComplete({ ...result, receiptImage: image });
+      } else {
+        throw new Error("نەتوانرا زانیارییەکان بخوێنرێتەوە");
+      }
     } catch (err) {
       console.error(err);
-      setError("شکستی هێنا لە سکانکردنی وەسڵەکە. تکایە دووبارە هەوڵ بدەرەوە.");
+      setError("شکستی هێنا لە سکانکردنی وەسڵەکە. تکایە دڵنیابە کە وێنەکە ڕوونە و دووبارە هەوڵ بدەرەوە.");
     } finally {
       setIsScanning(false);
     }
@@ -193,7 +145,7 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
               </div>
               
               <button
-                onClick={scanReceipt}
+                onClick={handleScan}
                 disabled={isScanning}
                 className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
               >
