@@ -48,8 +48,8 @@ import {
   ArrowDownToLine
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { scanReceipt } from './services/geminiService';
 import { BarcodeScanner } from './components/BarcodeScanner';
+import { ReceiptScanner } from './components/ReceiptScanner';
 import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isPast } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -66,7 +66,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Task, Transaction, AppData, WishlistItem } from './types';
+import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product } from './types';
 import { 
   getStoredData, 
   saveToStorage, 
@@ -253,7 +253,7 @@ const Badge = ({ children, variant = 'default' }: { children: React.ReactNode; v
     danger: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400",
     info: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
   };
-  return <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", variants[variant])}>{children}</span>;
+  return <span className={cn("px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide", variants[variant])}>{children}</span>;
 };
 
 const HistoryInput = ({ 
@@ -436,8 +436,9 @@ export default function App() {
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showReceiptScanner, setShowReceiptScanner] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
-  const [newProduct, setNewProduct] = useState<{ name: string, price: number }>({ name: '', price: 0 });
+  const [newProduct, setNewProduct] = useState<{ name: string, price: number, quantity: number }>({ name: '', price: 0, quantity: 1 });
   const [quickAddAmounts, setQuickAddAmounts] = useState<Record<string, number>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -515,7 +516,8 @@ export default function App() {
       console.log(`handleScanReceipt: Image resized. Size: ${Math.round(resizedImage.length / 1024)} KB`);
 
       console.log("handleScanReceipt: Calling scanReceipt service...");
-      const result = await scanReceipt(resizedImage);
+      // const result = await scanReceipt(resizedImage);
+      const result: any = null;
       
       if (!isStillScanning) return; // Already timed out
       
@@ -681,11 +683,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     // Add to receipt items
     setNewTransaction(p => ({
       ...p,
-      receiptItems: [...(p.receiptItems || []), { name: newProduct.name, price: newProduct.price, quantity: 1, unitPrice: newProduct.price }]
+      receiptItems: [...(p.receiptItems || []), { 
+        name: newProduct.name, 
+        price: newProduct.price * (newProduct.quantity || 1), 
+        quantity: newProduct.quantity || 1, 
+        unitPrice: newProduct.price 
+      }]
     }));
     
     setScannedBarcode(null);
-    setNewProduct({ name: '', price: 0 });
+    setNewProduct({ name: '', price: 0, quantity: 1 });
   };
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -803,14 +810,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const tasksQuery = query(collection(db, `users/${user.uid}/tasks`), orderBy('date', 'desc'));
     const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
       if (isMigrating && snapshot.empty) return;
-      const tasks = snapshot.docs.map(doc => doc.data() as Task);
+      const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
       setData(prev => ({ ...prev, tasks }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/tasks`));
 
     const transQuery = query(collection(db, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
     const unsubTrans = onSnapshot(transQuery, (snapshot) => {
       if (isMigrating && snapshot.empty) return;
-      const transactions = snapshot.docs.map(doc => doc.data() as Transaction);
+      const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       setData(prev => ({ ...prev, transactions }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/transactions`));
 
@@ -828,14 +835,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const wishlistQuery = query(collection(db, `users/${user.uid}/wishlist`), orderBy('createdAt', 'desc'));
     const unsubWishlist = onSnapshot(wishlistQuery, (snapshot) => {
       if (isMigrating && snapshot.empty) return;
-      const wishlist = snapshot.docs.map(doc => doc.data() as any);
+      const wishlist = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setData(prev => ({ ...prev, wishlist }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/wishlist`));
 
     const debtsQuery = query(collection(db, `users/${user.uid}/debts`), orderBy('date', 'desc'));
     const unsubDebts = onSnapshot(debtsQuery, (snapshot) => {
       if (isMigrating && snapshot.empty) return;
-      const debts = snapshot.docs.map(doc => doc.data() as Debt);
+      const debts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debt));
       setData(prev => ({ ...prev, debts }));
       setDebts(debts);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/debts`));
@@ -843,7 +850,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const savingsQuery = query(collection(db, `users/${user.uid}/savingsGoals`), orderBy('createdAt', 'desc'));
     const unsubSavings = onSnapshot(savingsQuery, (snapshot) => {
       if (isMigrating && snapshot.empty) return;
-      const savingsGoals = snapshot.docs.map(doc => doc.data() as SavingsGoal);
+      const savingsGoals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavingsGoal));
       setData(prev => ({ ...prev, savingsGoals }));
       setSavingsGoals(savingsGoals);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/savingsGoals`));
@@ -851,7 +858,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const productsQuery = query(collection(db, `users/${user.uid}/products`), orderBy('createdAt', 'desc'));
     const unsubProducts = onSnapshot(productsQuery, (snapshot) => {
       if (isMigrating && snapshot.empty) return;
-      const products = snapshot.docs.map(doc => doc.data() as Product);
+      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setData(prev => ({ ...prev, products }));
       setProducts(products);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/products`));
@@ -1379,13 +1386,25 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     }
   };
 
-  const deleteItem = async (id: string, type: 'task' | 'transaction' | 'wishlist') => {
+  const toggleItemStatus = async (id: string, completed: boolean) => {
+    const item = data.wishlist?.find(w => w.id === id);
+    if (item) {
+      const updatedItem = { ...item, completed };
+      await syncWishlistToFirebase(updatedItem);
+    }
+  };
+
+  const deleteItem = async (id: string, type: 'task' | 'transaction' | 'wishlist' | 'debts' | 'savingsGoals') => {
+    if (!confirm('ئایا دڵنیایت لە سڕینەوەی ئەم بڕگەیە؟')) return;
+    
     // Optimistic update
     setData(prev => {
       const newData = { ...prev };
       if (type === 'task') newData.tasks = prev.tasks.filter(t => t.id !== id);
       else if (type === 'transaction') newData.transactions = prev.transactions.filter(t => t.id !== id);
       else if (type === 'wishlist') newData.wishlist = (prev.wishlist || []).filter(w => w.id !== id);
+      else if (type === 'debts') newData.debts = (prev.debts || []).filter(d => d.id !== id);
+      else if (type === 'savingsGoals') newData.savingsGoals = (prev.savingsGoals || []).filter(s => s.id !== id);
       return newData;
     });
 
@@ -1394,6 +1413,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         if (type === 'task') await deleteTaskFromFirebase(id);
         else if (type === 'transaction') await deleteTransactionFromFirebase(id);
         else if (type === 'wishlist') await deleteWishlistFromFirebase(id);
+        else if (type === 'debts') await deleteDebtFromFirebase(id);
+        else if (type === 'savingsGoals') await deleteSavingsGoalFromFirebase(id);
       } catch (err) {
         console.error("Failed to delete item:", err);
         // Rollback happens automatically via onSnapshot if sync fails
@@ -1452,7 +1473,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <button 
-                        onClick={() => toggleItemStatus(item.id, 'wishlist')}
+                        onClick={() => toggleItemStatus(item.id, !item.completed)}
                         className={cn(
                           "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
                           item.completed ? "bg-green-500 border-green-500 text-white" : "border-slate-300 hover:border-green-500"
@@ -1905,8 +1926,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       </button>
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
-                          {(task.workTypes || []).map(wt => (
-                            <span key={wt} className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                          {(task.workTypes || []).map((wt, i) => (
+                            <span key={i} className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
                         <h4 className={cn("font-black text-xl text-slate-800", task.completed && "line-through")}>{task.title}</h4>
@@ -2136,43 +2157,43 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 ) : (
                   filteredTransactions.map(t => (
                     <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-5">
-                      <p className="font-bold text-slate-800">{t.description}</p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {t.subCategory && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">{t.subCategory}</span>}
-                        {t.milkQuantity ? <span className="text-[10px] font-black text-blue-500 uppercase bg-blue-50 px-1.5 py-0.5 rounded">{t.milkQuantity} لیتر شیر</span> : null}
-                        {t.fuelLiters ? <span className="text-[10px] font-black text-red-500 uppercase bg-red-50 px-1.5 py-0.5 rounded">{t.fuelLiters} لیتر {t.fuelType}</span> : null}
-                        {t.fuelPricePerLiter ? <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">نرخی لیتر: {t.fuelPricePerLiter.toLocaleString()}</span> : null}
-                        {t.category === 'work' && t.maintenanceType && <span className="text-[10px] font-black text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded">{t.maintenanceType}</span>}
-                        {t.workLocation && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">شوێن: {t.workLocation}</span>}
-                        {t.shopName && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">ناوی شوێن: {t.shopName}</span>}
-                        {t.itemsBought && <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">پێداویستی: {t.itemsBought}</span>}
-                        {t.customerName && <span className="text-[10px] font-black text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded">کڕیار: {t.customerName}</span>}
-                        {t.invoiceNumber && <span className="text-[10px] font-black text-indigo-600 uppercase bg-indigo-50 px-1.5 py-0.5 rounded">قایمە: {t.invoiceNumber}</span>}
-                        {t.driverName && <span className="text-[10px] font-black text-slate-500 uppercase bg-slate-100 px-1.5 py-0.5 rounded">سایەق: {t.driverName}</span>}
-                        {t.discount ? <span className="text-[10px] font-black text-orange-500 uppercase bg-orange-50 px-1.5 py-0.5 rounded">داشکاندن: {t.discount.toLocaleString()}</span> : null}
-                        {t.paidAmount ? <span className="text-[10px] font-black text-emerald-600 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">وەرگیراو: {t.paidAmount.toLocaleString()}</span> : null}
-                        {t.remainingAmount ? <span className="text-[10px] font-black text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded">ماوە: {t.remainingAmount.toLocaleString()}</span> : null}
-                        {t.debtAmount ? <span className="text-[10px] font-black text-red-600 uppercase bg-red-50 px-1.5 py-0.5 rounded">قەرز: {t.debtAmount.toLocaleString()}</span> : null}
+                    <td className="px-6 py-6">
+                      <p className="font-bold text-slate-800 text-lg mb-2">{t.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {t.subCategory && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">{t.subCategory}</span>}
+                        {t.milkQuantity ? <span className="text-[11px] font-bold text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded-lg">{t.milkQuantity} لیتر شیر</span> : null}
+                        {t.fuelLiters ? <span className="text-[11px] font-bold text-red-600 uppercase bg-red-50 px-2 py-1 rounded-lg">{t.fuelLiters} لیتر {t.fuelType}</span> : null}
+                        {t.fuelPricePerLiter ? <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">نرخی لیتر: {t.fuelPricePerLiter.toLocaleString()}</span> : null}
+                        {t.category === 'work' && t.maintenanceType && <span className="text-[11px] font-bold text-amber-700 uppercase bg-amber-50 px-2 py-1 rounded-lg">{t.maintenanceType}</span>}
+                        {t.workLocation && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">شوێن: {t.workLocation}</span>}
+                        {t.shopName && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">ناوی شوێن: {t.shopName}</span>}
+                        {t.itemsBought && <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-lg">پێداویستی: {t.itemsBought}</span>}
+                        {t.customerName && <span className="text-[11px] font-bold text-blue-700 uppercase bg-blue-50 px-2 py-1 rounded-lg">کڕیار: {t.customerName}</span>}
+                        {t.invoiceNumber && <span className="text-[11px] font-bold text-indigo-700 uppercase bg-indigo-50 px-2 py-1 rounded-lg">قایمە: {t.invoiceNumber}</span>}
+                        {t.driverName && <span className="text-[11px] font-bold text-slate-600 uppercase bg-slate-100 px-2 py-1 rounded-lg">سایەق: {t.driverName}</span>}
+                        {t.discount ? <span className="text-[11px] font-bold text-orange-600 uppercase bg-orange-50 px-2 py-1 rounded-lg">داشکاندن: {t.discount.toLocaleString()}</span> : null}
+                        {t.paidAmount ? <span className="text-[11px] font-bold text-emerald-700 uppercase bg-emerald-50 px-2 py-1 rounded-lg">وەرگیراو: {t.paidAmount.toLocaleString()}</span> : null}
+                        {t.remainingAmount ? <span className="text-[11px] font-bold text-blue-700 uppercase bg-blue-50 px-2 py-1 rounded-lg">ماوە: {t.remainingAmount.toLocaleString()}</span> : null}
+                        {t.debtAmount ? <span className="text-[11px] font-bold text-red-700 uppercase bg-red-50 px-2 py-1 rounded-lg">قەرز: {t.debtAmount.toLocaleString()}</span> : null}
                         {t.receiptImage && (
-                          <div className="w-full mt-2">
+                          <div className="w-full mt-3">
                             <button 
                               onClick={() => setSelectedImage(t.receiptImage)}
-                              className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-blue-500 transition-all group"
+                              className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-100 hover:border-blue-500 transition-all group shadow-sm"
                             >
                               <img src={t.receiptImage} alt="Receipt" className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Search className="w-4 h-4 text-white" />
+                                <Search className="w-5 h-5 text-white" />
                               </div>
                             </button>
                           </div>
                         )}
                         {t.receiptItems && t.receiptItems.length > 0 && (
-                          <div className="w-full mt-2 space-y-1">
+                          <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={i} className="flex justify-between text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                              <div key={i} className="flex justify-between text-[11px] font-medium text-slate-600 bg-slate-50/80 px-3 py-1.5 rounded-lg border border-slate-100">
                                 <span>{item.name}</span>
-                                <span>{item.price.toLocaleString()} دینار</span>
+                                <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
                             ))}
                           </div>
@@ -2489,8 +2510,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                   {/* Selected Custom Types */}
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map(t => (
-                      <div key={t} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
+                    {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t, i) => (
+                      <div key={i} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
                         <span 
                           contentEditable 
                           suppressContentEditableWarning
@@ -2623,7 +2644,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
               <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
-                <h3 className="text-xl font-black text-[var(--text-main)]">تۆماری دارایی</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-black text-[var(--text-main)]">تۆماری دارایی</h3>
+                  <button 
+                    onClick={() => setShowReceiptScanner(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-[10px] font-black hover:bg-blue-100 transition-all active:scale-95"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    سکانکردنی وەسڵ
+                  </button>
+                </div>
                 <button onClick={() => {
                   setShowTransactionModal(false);
                   sessionStorage.removeItem('pending_transaction');
@@ -2649,9 +2679,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   />
                   {newTransaction.category === 'personal' && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {(data.descriptions || []).slice(0, 12).map(d => (
+                      {(data.descriptions || []).slice(0, 12).map((d, i) => (
                         <button 
-                          key={d}
+                          key={i}
                           onClick={() => setNewTransaction(p => ({ ...p, description: d }))}
                           className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-lg transition-colors text-[var(--text-main)]"
                         >
@@ -2707,70 +2737,70 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                 {/* Specific Fields for Delivery/Driver */}
                 {newTransaction.description === 'سایەقی' && (
-                  <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">ناوی کڕیار</label>
+                  <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-3xl border border-slate-100 dark:border-slate-700/50">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">ناوی کڕیار</label>
                         <HistoryInput 
                           value={newTransaction.customerName || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, customerName: val }))} 
                           historyKey="transaction_customer"
                           history={data.history?.['transaction_customer']}
                           onSaveHistory={handleSaveHistory}
-                          className="px-4 py-2 bg-[var(--bg-card)] text-sm" 
+                          className="px-4 py-3 bg-[var(--bg-card)] text-sm rounded-2xl border-none shadow-sm" 
                           placeholder="کڕیار..."
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">ژمارەی قایمە</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">ژمارەی قایمە</label>
                         <input 
                           type="text" 
                           value={newTransaction.invoiceNumber || ''} 
                           onChange={e => setNewTransaction(p => ({ ...p, invoiceNumber: e.target.value }))} 
-                          className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
+                          className="w-full px-4 py-3 bg-[var(--bg-card)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)] shadow-sm" 
                           placeholder="0000"
                         />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-500 mr-1">ناوی سایەق</label>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">ناوی سایەق</label>
                       <HistoryInput 
                         value={newTransaction.driverName || ''} 
                         onChange={val => setNewTransaction(p => ({ ...p, driverName: val }))} 
                         historyKey="transaction_driver"
                         history={data.history?.['transaction_driver']}
                         onSaveHistory={handleSaveHistory}
-                        className="px-4 py-2 bg-[var(--bg-card)] text-sm" 
+                        className="px-4 py-3 bg-[var(--bg-card)] text-sm rounded-2xl border-none shadow-sm" 
                         placeholder="سایەق..."
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">کۆی گشتی (دینار)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">کۆی گشتی (دینار)</label>
                         <FormattedNumberInput 
                           value={newTransaction.amount || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, amount: val }))} 
-                          className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
+                          className="w-full px-4 py-3 bg-[var(--bg-card)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)] shadow-sm" 
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">داشکاندن</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">داشکاندن</label>
                         <FormattedNumberInput 
                           value={newTransaction.discount || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, discount: val }))} 
-                          className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
+                          className="w-full px-4 py-3 bg-[var(--bg-card)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)] shadow-sm" 
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 mr-1">وەرگیراو (پارەی دراو)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">وەرگیراو (پارەی دراو)</label>
                         <FormattedNumberInput 
                           value={newTransaction.paidAmount || ''} 
                           onChange={val => setNewTransaction(p => ({ ...p, paidAmount: val }))} 
-                          className="w-full px-4 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)]" 
+                          className="w-full px-4 py-3 bg-[var(--bg-card)] border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)] shadow-sm" 
                         />
                       </div>
                       <div className="space-y-1">
@@ -2960,17 +2990,33 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                                 placeholder="ناوی بابەت" 
                               />
                             </div>
-                            <div className="w-24 space-y-1">
+                            <div className="w-20 space-y-1">
                               <label className="text-[10px] font-black text-slate-400 mr-1">نرخ</label>
                               <FormattedNumberInput 
                                 placeholder="نرخ" 
-                                value={item.price || ''} 
+                                value={item.unitPrice || item.price || ''} 
                                 onChange={val => {
                                   const next = [...(newTransaction.receiptItems || [])];
-                                  next[index].price = val;
+                                  next[index].unitPrice = val;
+                                  next[index].price = val * (next[index].quantity || 1);
                                   setNewTransaction(p => ({ ...p, receiptItems: next }));
                                 }}
-                                className="w-full px-3 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xs text-[var(--text-main)]" 
+                                className="w-full px-2 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xs text-[var(--text-main)]" 
+                              />
+                            </div>
+                            <div className="w-14 space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 mr-1">دانە</label>
+                              <input 
+                                type="number"
+                                value={item.quantity || 1} 
+                                onChange={e => {
+                                  const next = [...(newTransaction.receiptItems || [])];
+                                  const qty = parseInt(e.target.value) || 1;
+                                  next[index].quantity = qty;
+                                  next[index].price = (next[index].unitPrice || next[index].price) * qty;
+                                  setNewTransaction(p => ({ ...p, receiptItems: next }));
+                                }}
+                                className="w-full px-2 py-2 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-xs text-[var(--text-main)] text-center" 
                               />
                             </div>
                             {index > 0 && (
@@ -3177,6 +3223,30 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           />
         )}
 
+        {showReceiptScanner && (
+          <ReceiptScanner 
+            onScanComplete={(result) => {
+              setNewTransaction(prev => ({
+                ...prev,
+                description: result.shopName || prev.description,
+                amount: result.totalAmount || prev.amount,
+                customerName: result.customerName || prev.customerName,
+                invoiceNumber: result.invoiceNumber || prev.invoiceNumber,
+                date: result.date || prev.date,
+                receiptItems: (result.items || []).map((item: any) => ({
+                  ...item,
+                  quantity: item.quantity || 1,
+                  unitPrice: item.unitPrice || item.price,
+                  price: item.price || (item.unitPrice * (item.quantity || 1))
+                })),
+                receiptImage: result.receiptImage || prev.receiptImage
+              }));
+              setShowReceiptScanner(false);
+            }}
+            onClose={() => setShowReceiptScanner(false)}
+          />
+        )}
+
         {scannedBarcode && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setScannedBarcode(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
@@ -3199,14 +3269,26 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     placeholder="ناوی کاڵا بنووسە..." 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500 mr-1">نرخ (دینار)</label>
-                  <FormattedNumberInput 
-                    value={newProduct.price || ''} 
-                    onChange={val => setNewProduct(p => ({ ...p, price: val }))} 
-                    className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
-                    placeholder="0" 
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-black text-slate-500 mr-1">نرخ (دینار)</label>
+                    <FormattedNumberInput 
+                      value={newProduct.price || ''} 
+                      onChange={val => setNewProduct(p => ({ ...p, price: val }))} 
+                      className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                      placeholder="0" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-black text-slate-500 mr-1">دانە (عدد)</label>
+                    <input 
+                      type="number"
+                      value={newProduct.quantity} 
+                      onChange={e => setNewProduct(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} 
+                      className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                      placeholder="1" 
+                    />
+                  </div>
                 </div>
                 <Button className="w-full py-5 rounded-3xl text-lg" onClick={handleSaveNewProduct}>پاشەکەوتکردن</Button>
               </div>
