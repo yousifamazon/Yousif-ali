@@ -16,6 +16,7 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [hasAutoScanned, setHasAutoScanned] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,6 +25,7 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
       reader.onloadend = () => {
         setImage(reader.result as string);
         setError(null);
+        setHasAutoScanned(false);
       };
       reader.readAsDataURL(file);
     }
@@ -32,6 +34,7 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
   const startCamera = async () => {
     try {
       setShowCamera(true);
+      setHasAutoScanned(false);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
       });
@@ -53,6 +56,7 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
         context.drawImage(videoRef.current, 0, 0);
         const dataUrl = canvasRef.current.toDataURL('image/jpeg');
         setImage(dataUrl);
+        setHasAutoScanned(false);
         stopCamera();
       }
     }
@@ -88,6 +92,14 @@ export const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, 
       setIsScanning(false);
     }
   };
+
+  // Auto-scan when image is set
+  React.useEffect(() => {
+    if (image && !isScanning && !hasAutoScanned && !error) {
+      handleScan();
+      setHasAutoScanned(true);
+    }
+  }, [image, isScanning, hasAutoScanned, error]);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">

@@ -32,7 +32,7 @@ export const resizeImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
       } catch (err) {
         console.error("Resize error:", err);
         reject(err);

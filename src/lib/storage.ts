@@ -24,7 +24,16 @@ export const getStoredData = (): AppData => {
   const defaultDescriptions = [
     'بەنزین', 'دکتۆر', 'مارکێت', 'جگەرە', 'میوە', 'چاکردنەوەی سەیارە', 'کارەبا', 'کرێ', 'هێنانەوەی شیر'
   ];
-  const defaultData: AppData = { tasks: [], transactions: [], wishlist: [], descriptions: defaultDescriptions, history: {} };
+  const defaultData: AppData = { 
+    tasks: [], 
+    transactions: [], 
+    wishlist: [], 
+    debts: [],
+    savingsGoals: [],
+    products: [],
+    descriptions: defaultDescriptions, 
+    history: {} 
+  };
   let data = null;
   try {
     data = localStorage.getItem(STORAGE_KEY);

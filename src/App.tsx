@@ -45,17 +45,24 @@ import {
   Loader2,
   Menu,
   X,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Mic,
+  MicOff,
+  BrainCircuit,
+  Lightbulb,
+  Zap as ZapIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarcodeScanner } from './components/BarcodeScanner';
 import { ReceiptScanner } from './components/ReceiptScanner';
 import { scanReceipt } from './services/geminiService';
+import { getFinancialInsights, AIInsight } from './services/aiAdvisorService';
+import { parseVoiceCommand, VoiceAction } from './services/voiceCommandService';
 import { resizeImage } from './lib/imageUtils';
 import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isPast } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { 
   AreaChart, 
   Area, 
@@ -184,6 +191,139 @@ const parseFirestoreError = (err: any): string => {
     errorMessage += '\n\nوردەکاری: ' + err.message.substring(0, 150);
   }
   return errorMessage;
+};
+
+const VoiceCommandModal = ({ 
+  isOpen, 
+  onClose, 
+  onCommand, 
+  isListening, 
+  setIsListening, 
+  message,
+  setVoiceMessage
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onCommand: (text: string) => void;
+  isListening: boolean;
+  setIsListening: (val: boolean) => void;
+  message: string | null;
+  setVoiceMessage: (msg: string | null) => void;
+}) => {
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = React.useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'ku-IQ'; // Try Kurdish, fallback to others if needed
+
+      recognitionRef.current.onresult = (event: any) => {
+        const text = event.results[0][0].transcript;
+        setTranscript(text);
+        setIsListening(false);
+        onCommand(text);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          setVoiceMessage("تکایە ڕێگە بدە بە بەکارهێنانی مایکڕۆفۆن لە ڕێکخستنەکانی وێبگەڕەکەتدا.");
+        } else if (event.error === 'no-speech') {
+          setVoiceMessage("هیچ دەنگێک نەبیسترا، تکایە دووبارە هەوڵ بدەرەوە.");
+        } else {
+          setVoiceMessage("هەڵەیەک ڕوویدا لە کاتی ناسینەوەی دەنگدا.");
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const startListening = () => {
+    setTranscript('');
+    setIsListening(true);
+    recognitionRef.current?.start();
+  };
+
+  const stopListening = () => {
+    setIsListening(false);
+    recognitionRef.current?.stop();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="relative w-full max-w-lg bg-[var(--bg-card)] rounded-[40px] p-8 shadow-2xl border border-[var(--border-color)] overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+            
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="relative">
+                <div className={cn(
+                  "w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500",
+                  isListening ? "bg-red-500 animate-pulse scale-110 shadow-[0_0_40px_rgba(239,68,68,0.5)]" : "bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)]"
+                )}>
+                  {isListening ? <Mic className="w-10 h-10 text-white" /> : <MicOff className="w-10 h-10 text-white" />}
+                </div>
+                {isListening && (
+                  <motion.div 
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-0 rounded-full border-4 border-red-500"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-[var(--text-main)]">فەرمانی دەنگی</h2>
+                <p className="text-[var(--text-muted)] font-bold">بڵێ "٥٠٠٠ بۆ نانی بەیانی" یان "ئیشی چاکردنەوەی کارەبا زیاد بکە"</p>
+              </div>
+
+              <div className="w-full bg-[var(--bg-main)] p-6 rounded-3xl min-h-[100px] flex items-center justify-center border border-[var(--border-color)]">
+                {transcript ? (
+                  <p className="text-lg font-black text-blue-600 dark:text-blue-400">"{transcript}"</p>
+                ) : message ? (
+                  <p className="text-lg font-bold text-[var(--text-main)]">{message}</p>
+                ) : (
+                  <p className="text-[var(--text-muted)] italic">چاوەڕێی دەنگتم...</p>
+                )}
+              </div>
+
+              <div className="flex gap-4 w-full">
+                <Button 
+                  variant={isListening ? 'danger' : 'primary'} 
+                  className="flex-1 py-6 rounded-3xl text-lg"
+                  onClick={isListening ? stopListening : startListening}
+                >
+                  {isListening ? 'بوەستە' : 'دەستپێ بکە'}
+                </Button>
+                <Button variant="secondary" className="px-8 rounded-3xl" onClick={onClose}>داخستن</Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
 };
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void; key?: string | number }) => (
@@ -332,7 +472,7 @@ const HistoryInput = ({
           >
             {history.map((item, i) => (
               <button
-                key={i}
+                key={`${i}-history-item`}
                 onClick={() => {
                   onChange(item);
                   setIsOpen(false);
@@ -428,6 +568,65 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // AI Insights Effect
+  useEffect(() => {
+    const fetchInsights = async () => {
+      if ((data.transactions?.length || 0) > 0 || (data.debts?.length || 0) > 0) {
+        setIsAnalyzing(true);
+        const insights = await getFinancialInsights(data);
+        if (insights.length > 0) {
+          setAiInsights(insights);
+        }
+        setIsAnalyzing(false);
+      }
+    };
+
+    // Fetch on load and then every 30 minutes
+    fetchInsights();
+    const interval = setInterval(fetchInsights, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [data.transactions?.length, data.debts?.length]);
+
+  const handleVoiceCommand = async (text: string) => {
+    setVoiceMessage("خەریکی لێکدانەوەی فەرمانەکەم...");
+    const result = await parseVoiceCommand(text);
+    setVoiceMessage(result.message);
+
+    if (result.type === 'ADD_TRANSACTION') {
+      const newT: Transaction = {
+        id: crypto.randomUUID(),
+        amount: result.data.amount || 0,
+        description: result.data.description || '',
+        type: result.data.type || 'expense',
+        category: result.data.category || 'گشتی',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        receiptItems: []
+      };
+      setData(prev => ({
+        ...prev,
+        transactions: [newT, ...prev.transactions]
+      }));
+      syncTransactionToFirebase(newT);
+    } else if (result.type === 'ADD_TASK') {
+      const newT: Task = {
+        id: crypto.randomUUID(),
+        title: result.data.title || '',
+        description: '',
+        details: result.data.details || [{ subject: '', work: '' }],
+        date: format(new Date(), 'yyyy-MM-dd'),
+        completed: false,
+        priority: 'medium',
+        category: 'personal',
+        workTypes: result.data.workTypes || []
+      };
+      setData(prev => ({
+        ...prev,
+        tasks: [newT, ...prev.tasks]
+      }));
+      syncTaskToFirebase(newT);
+    }
+  };
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
@@ -441,6 +640,13 @@ export default function App() {
   const [showReceiptScanner, setShowReceiptScanner] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState<{ name: string, price: number, quantity: number }>({ name: '', price: 0, quantity: 1 });
+  
+  // AI & Voice State
+  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceMessage, setVoiceMessage] = useState<string | null>(null);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [quickAddAmounts, setQuickAddAmounts] = useState<Record<string, number>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -725,20 +931,20 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         ]);
 
         // Migrate tasks if cloud is empty but local is not
-        if (tasksSnap.empty && data.tasks.length > 0) {
+        if (tasksSnap.empty && (data.tasks?.length || 0) > 0) {
           console.log("Migrating local tasks to Firebase...");
           setIsMigrating(true);
-          for (const task of data.tasks) {
+          for (const task of (data.tasks || [])) {
             await syncTaskToFirebase(task);
           }
           setIsMigrating(false);
         }
 
         // Migrate transactions if cloud is empty but local is not
-        if (transSnap.empty && data.transactions.length > 0) {
+        if (transSnap.empty && (data.transactions?.length || 0) > 0) {
           console.log("Migrating local transactions to Firebase...");
           setIsMigrating(true);
-          for (const trans of data.transactions) {
+          for (const trans of (data.transactions || [])) {
             await syncTransactionToFirebase(trans);
           }
           setIsMigrating(false);
@@ -762,7 +968,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       }
     });
     return () => unsubscribe();
-  }, [data.tasks.length, data.transactions.length]);
+  }, [data.tasks?.length, data.transactions?.length]);
 
   // Sync from Firestore
   useEffect(() => {
@@ -864,7 +1070,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   // --- Calculations ---
 
   const stats = useMemo(() => {
-    const personal = data.transactions.filter(t => t.category === 'personal');
+    const personal = (data.transactions || []).filter(t => t.category === 'personal');
 
     const personalExpense = personal.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     const personalIncome = personal.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
@@ -879,7 +1085,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       }
     });
     
-    const pendingTasks = data.tasks.filter(t => !t.completed).length;
+    const pendingTasks = (data.tasks || []).filter(t => !t.completed).length;
 
     // Chart Data (Last 7 days)
     const last7Days = eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() });
@@ -896,7 +1102,20 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       };
     });
 
-    return { personalExpense, personalIncome, personalSavings, balance, pendingTasks, chartData };
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyTransactions = personal.filter(t => {
+      const d = parseISO(t.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+    const monthlyExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+
+    const totalMilk = (data.transactions || [])
+      .filter(t => t.category === 'work' && t.description === 'هێنانەوەی شیر')
+      .reduce((acc, t) => acc + (t.milkQuantity || 0), 0);
+
+    return { personalExpense, personalIncome, personalSavings, balance, pendingTasks, chartData, monthlyIncome, monthlyExpense, totalMilk };
   }, [data]);
 
   // --- Handlers ---
@@ -1062,7 +1281,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const exportToExcel = () => {
-    const tasksData = data.tasks.map(t => ({
+    const tasksData = (data.tasks || []).map(t => ({
       'ناونیشان': t.title,
       'بابەت و کارەکان': (t.details || []).map(d => `${d.subject}: ${d.work}`).join(' | '),
       'بەروار': t.date,
@@ -1071,7 +1290,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       'تەواوبووە': t.completed ? 'بەڵێ' : 'نەخێر'
     }));
 
-    const transactionsData = data.transactions.map(t => ({
+    const transactionsData = (data.transactions || []).map(t => ({
       'وەسف': t.description,
       'بڕ': t.amount,
       'بەروار': t.date,
@@ -1099,7 +1318,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     // Tasks Section
     doc.text("Tasks (ئیشەکان)", 10, 30);
-    const taskRows = data.tasks.map(t => [
+    const taskRows = (data.tasks || []).map(t => [
       t.title,
       (t.details || []).map(d => `${d.subject}: ${d.work}`).join('\n'),
       t.date,
@@ -1107,7 +1326,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       t.completed ? 'Yes' : 'No'
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Title', 'Details', 'Date', 'Work Types', 'Done']],
       body: taskRows,
       startY: 35,
@@ -1116,9 +1335,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     });
 
     // Transactions Section
-    const finalY = (doc as any).lastAutoTable.finalY || 40;
+    const finalY = (doc as any).lastAutoTable?.finalY || 40;
     doc.text("Financials (دارایی)", 10, finalY + 15);
-    const transRows = data.transactions.map(t => [
+    const transRows = (data.transactions || []).map(t => [
       t.description,
       t.amount.toLocaleString(),
       t.date,
@@ -1126,7 +1345,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       t.category === 'work' ? 'Work' : 'Personal'
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Description', 'Amount', 'Date', 'Type', 'Category']],
       body: transRows,
       startY: finalY + 20,
@@ -1429,7 +1648,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <div className="text-center py-12 text-[var(--text-muted)]">هیچ ئاواتێک نییە</div>
           ) : (
             items.map(item => (
-              <Card key={item.id} className={cn("p-5", item.completed && "opacity-60")}>
+              <Card key={`${item.id}-wishlist-card`} className={cn("p-5", item.completed && "opacity-60")}>
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -1508,7 +1727,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
         <div className="space-y-4">
           {(data.debts || []).map(debt => (
-            <Card key={debt.id} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
+            <Card key={`${debt.id}-debt-card`} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h4 className={cn("font-bold text-lg", debt.completed && "line-through text-[var(--text-muted)]")}>{debt.personName}</h4>
@@ -1555,7 +1774,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {(data.savingsGoals || []).map(goal => {
             const progress = (goal.currentAmount / goal.targetAmount) * 100;
             return (
-              <Card key={goal.id} className="p-6 space-y-4">
+              <Card key={`${goal.id}-savings-card`} className="p-6 space-y-4">
                 <div className="flex justify-between items-start">
                   <h4 className="font-bold text-xl">{goal.title}</h4>
                   <div className="flex items-center gap-2">
@@ -1617,44 +1836,35 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const renderDashboard = () => (
-    <div className="space-y-8 pb-12">
-      {/* Hero Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
+    <div className="space-y-8 pb-24">
+      {/* Bento Grid Header */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Main Balance Card */}
+        <Card className="md:col-span-2 bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none p-8 flex flex-col justify-between min-h-[240px]">
           <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-6">
+            <div className="flex justify-between items-start mb-8">
               <div>
                 <p className="text-blue-100 font-medium mb-1">کۆی گشتی باڵانس</p>
-                <h2 className="text-4xl sm:text-5xl font-black">
-                  {stats.balance.toLocaleString()} <span className="text-xl sm:text-2xl font-normal opacity-80">د.ع</span>
+                <h2 className="text-4xl sm:text-5xl font-black tracking-tight">
+                  {stats.balance.toLocaleString()} <span className="text-xl font-normal opacity-80">د.ع</span>
                 </h2>
               </div>
-              <div className="hidden sm:block w-px h-12 bg-white/20" />
-              <div>
-                <p className="text-blue-100 font-medium mb-1">کۆی پاشەکەوت</p>
-                <h2 className="text-3xl sm:text-4xl font-black">
-                  {stats.personalSavings.toLocaleString()} <span className="text-lg sm:text-xl font-normal opacity-80">د.ع</span>
-                </h2>
+              <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
+                <Wallet className="w-8 h-8" />
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
+              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4 rounded-xl" onClick={() => {
                 setNewTransaction({ ...initialTransactionState, type: 'income', category: 'personal' });
                 setShowTransactionModal(true);
               }}>
                 <Plus className="w-4 h-4" /> داهات
               </Button>
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
+              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4 rounded-xl" onClick={() => {
                 setNewTransaction({ ...initialTransactionState, type: 'expense', category: 'personal' });
                 setShowTransactionModal(true);
               }}>
                 <ArrowUpRight className="w-4 h-4" /> خەرجی
-              </Button>
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4" onClick={() => {
-                setNewTransaction({ ...initialTransactionState, type: 'savings', category: 'personal', description: 'پارە هەڵگرتن' });
-                setShowTransactionModal(true);
-              }}>
-                <Wallet className="w-4 h-4" /> هەڵگرتن
               </Button>
             </div>
           </div>
@@ -1663,42 +1873,98 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </div>
         </Card>
 
-        <Card className="bg-[var(--bg-card)] border-[var(--border-color)]">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-[var(--text-main)]">ئاماری خەرجی</h3>
-            <Badge variant="info">٧ رۆژ</Badge>
+        {/* AI Advisor Card */}
+        <Card className="md:col-span-2 bg-[var(--bg-card)] border-[var(--border-color)] overflow-hidden relative group">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl">
+              <BrainCircuit className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-[var(--text-main)]">ڕاوێژکاری ژیری دەستکرد</h3>
+            {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-500" />}
           </div>
-          <div className="h-40 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData}>
-                <defs>
-                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="expense" stroke="#f43f5e" fillOpacity={1} fill="url(#colorExpense)" />
-                <Area type="monotone" dataKey="income" stroke="#2563eb" fillOpacity={0.1} fill="#2563eb" />
-                <Area type="monotone" dataKey="savings" stroke="#f59e0b" fillOpacity={0.1} fill="#f59e0b" />
-              </AreaChart>
-            </ResponsiveContainer>
+          
+          <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+            {aiInsights.length > 0 ? (
+              aiInsights.map((insight, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={cn(
+                    "p-3 rounded-2xl border flex gap-3",
+                    insight.priority === 'high' ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20" : "bg-[var(--bg-main)] border-[var(--border-color)]"
+                  )}
+                >
+                  <div className="mt-1">
+                    {insight.type === 'saving' ? <PiggyBank className="w-4 h-4 text-green-500" /> : 
+                     insight.type === 'spending' ? <TrendingDown className="w-4 h-4 text-red-500" /> :
+                     insight.type === 'debt' ? <AlertCircle className="w-4 h-4 text-amber-500" /> :
+                     <Lightbulb className="w-4 h-4 text-blue-500" />}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-[var(--text-main)] mb-0.5">{insight.title}</h4>
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] leading-relaxed">{insight.content}</p>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Sparkles className="w-8 h-8 text-purple-300 mb-2" />
+                <p className="text-xs font-bold text-[var(--text-muted)]">خەریکی شیکردنەوەی داتاکانتم...</p>
+              </div>
+            )}
           </div>
-          <div className="mt-4 flex flex-wrap gap-4 justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-xs font-bold text-[var(--text-muted)]">خەرجی</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-600" />
-              <span className="text-xs font-bold text-[var(--text-muted)]">داهات</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500" />
-              <span className="text-xs font-bold text-[var(--text-muted)]">پاشەکەوت</span>
-            </div>
+        </Card>
+
+        {/* Stats Mini Cards */}
+        <Card className="bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20 flex flex-col justify-between">
+          <p className="text-xs font-bold text-green-700 dark:text-green-400">داهاتی ئەم مانگە</p>
+          <div className="mt-2">
+            <h4 className="text-xl font-black text-green-600">{stats.monthlyIncome.toLocaleString()}</h4>
+            <p className="text-[10px] text-green-500 font-bold">+١٢٪ بەراورد بە مانگی پێشوو</p>
+          </div>
+        </Card>
+
+        <Card className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20 flex flex-col justify-between">
+          <p className="text-xs font-bold text-red-700 dark:text-red-400">خەرجی ئەم مانگە</p>
+          <div className="mt-2">
+            <h4 className="text-xl font-black text-red-600">{stats.monthlyExpense.toLocaleString()}</h4>
+            <p className="text-[10px] text-red-500 font-bold">-٥٪ بەراورد بە مانگی پێشوو</p>
+          </div>
+        </Card>
+
+        <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20 flex flex-col justify-between">
+          <p className="text-xs font-bold text-amber-700 dark:text-amber-400">کۆی قەرزەکان</p>
+          <div className="mt-2">
+            <h4 className="text-xl font-black text-amber-600">{(data.debts || []).filter(d => d.type === 'owed' && !d.completed).reduce((acc, d) => acc + d.amount, 0).toLocaleString()}</h4>
+            <p className="text-[10px] text-amber-500 font-bold">٣ کەس چاوەڕێی پارەن</p>
+          </div>
+        </Card>
+
+        <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20 flex flex-col justify-between">
+          <p className="text-xs font-bold text-blue-700 dark:text-blue-400">ئیشەکانی ئەمڕۆ</p>
+          <div className="mt-2">
+            <h4 className="text-xl font-black text-blue-600">{(data.tasks || []).filter(t => isToday(parseISO(t.date)) && !t.completed).length} ئیش</h4>
+            <p className="text-[10px] text-blue-500 font-bold">٢ ئیشی گرنگ ماوە</p>
           </div>
         </Card>
       </div>
+
+      {/* Voice Command Floating Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowVoiceModal(true)}
+        className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 transition-colors"
+      >
+        <Mic className="w-8 h-8" />
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 rounded-full border-4 border-blue-400"
+        />
+      </motion.button>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1709,7 +1975,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           { icon: User, label: 'خەرجی تر', color: 'bg-[var(--bg-main)] text-[var(--text-muted)]' },
         ].map((action, i) => (
           <button 
-            key={i} 
+            key={`${i}-quick-action`} 
             onClick={() => {
               setNewTransaction({ 
                 ...initialTransactionState,
@@ -1762,13 +2028,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <Button variant="ghost" size="sm" onClick={() => setActiveTab('tasks')}>هەمووی</Button>
           </div>
           <div className="space-y-3">
-            {data.tasks.filter(t => isToday(parseISO(t.date)) && !t.completed).length === 0 ? (
+            {(data.tasks || []).filter(t => isToday(parseISO(t.date)) && !t.completed).length === 0 ? (
               <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
                 <p className="text-[var(--text-muted)] font-medium">هیچ ئیشێکی ماوە نییە بۆ ئەمڕۆ</p>
               </div>
             ) : (
-              data.tasks.filter(t => isToday(parseISO(t.date)) && !t.completed).slice(0, 4).map(task => (
-                <div key={task.id} className="group bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4 hover:border-blue-200 transition-all">
+              (data.tasks || []).filter(t => isToday(parseISO(t.date)) && !t.completed).slice(0, 4).map(task => (
+                <div key={`${task.id}-today-task`} className="group bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4 hover:border-blue-200 transition-all">
                   <button onClick={() => toggleTask(task.id)} className="text-[var(--text-muted)] hover:text-blue-600 transition-colors">
                     <Circle className="w-6 h-6" />
                   </button>
@@ -1776,7 +2042,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <h4 className="font-bold text-[var(--text-main)]">{task.title}</h4>
                     <div className="mt-1 space-y-0.5">
                       {(task.details || []).map((d, i) => (
-                        <p key={i} className="text-[10px] text-[var(--text-muted)]">
+                        <p key={`${i}-today-task-detail`} className="text-[10px] text-[var(--text-muted)]">
                           <span className="font-black text-[var(--text-muted)]">{d.subject}:</span> {d.work}
                         </p>
                       ))}
@@ -1800,8 +2066,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <Button variant="ghost" size="sm" onClick={() => setActiveTab('personal')}>هەمووی</Button>
           </div>
           <div className="space-y-3">
-            {data.transactions.slice(0, 4).map(t => (
-              <div key={t.id} className="bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4">
+            {(data.transactions || []).slice(0, 4).map(t => (
+              <div key={`${t.id}-recent-transaction`} className="bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4">
                 <div className={cn(
                   "p-2.5 rounded-2xl",
                   t.type === 'income' ? "bg-green-50 dark:bg-green-900/20 text-green-600" : "bg-red-50 dark:bg-red-900/20 text-red-600"
@@ -1852,7 +2118,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
       <div className="space-y-8">
         {['ئەمڕۆ', 'سبەی', 'دواتر'].map(period => {
-          const filteredTasks = data.tasks.filter(t => {
+          const filteredTasks = (data.tasks || []).filter(t => {
             const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
             if (!matchesSearch) return false;
             if (period === 'ئەمڕۆ') return isToday(parseISO(t.date));
@@ -1877,7 +2143,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               <h3 className="text-lg font-black text-[var(--text-muted)] mr-2">{period}</h3>
               <div className="grid grid-cols-1 gap-4">
                 {filteredTasks.map(task => (
-                  <Card key={task.id} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
+                  <Card key={`${task.id}-daily-task`} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
                     <div className="flex items-center gap-5">
                       <button onClick={() => toggleTask(task.id)} className={cn(
                         "transition-all transform active:scale-90",
@@ -1888,13 +2154,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
                           {(task.workTypes || []).map((wt, i) => (
-                            <span key={i} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                            <span key={`${i}-work-type-badge`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
                         <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
                         <div className="mt-2 space-y-1">
                           {(task.details || []).map((d, i) => (
-                            <div key={i} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                            <div key={`${i}-task-detail-display`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
                               <p className="text-xs font-black text-[var(--text-muted)]">{d.subject}</p>
                               <p className="text-xs text-[var(--text-muted)] mt-0.5">{d.work}</p>
                             </div>
@@ -1951,7 +2217,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   );
 
   const renderFinance = (category: 'work' | 'personal') => {
-    const filteredTransactions = data.transactions.filter(t => {
+    const filteredTransactions = (data.transactions || []).filter(t => {
       if (t.category !== category) return false;
       const matchesSearch = t.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            (t.shopName || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -1991,7 +2257,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               ] : [])
             ].map(f => (
               <button
-                key={f.id}
+                key={`${f.id}-finance-filter`}
                 onClick={() => setFinanceFilter(f.id as any)}
                 className={cn(
                   "px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
@@ -2026,7 +2292,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {category === 'personal' && (data.descriptions || []).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {(data.descriptions || []).map((cat, idx) => (
-                <div key={idx} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
+                <div key={`${idx}-description-item`} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
                   {editingDescription?.index === idx ? (
                     <input 
                       autoFocus
@@ -2061,20 +2327,20 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <Card className="bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30">
             <p className="text-green-600 dark:text-green-400 font-bold text-sm">کۆی داهات</p>
             <h3 className="text-2xl font-black text-green-700 dark:text-green-300 mt-1">
-              {data.transactions.filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
+              {(data.transactions || []).filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
             </h3>
           </Card>
           <Card className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30">
             <p className="text-red-600 dark:text-red-400 font-bold text-sm">کۆی خەرجی</p>
             <h3 className="text-2xl font-black text-red-700 dark:text-red-300 mt-1">
-              {data.transactions.filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
+              {(data.transactions || []).filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
             </h3>
           </Card>
           <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
             <p className="text-blue-600 dark:text-blue-400 font-bold text-sm">باڵانس</p>
             <h3 className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-1">
-              {(data.transactions.filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0) - 
-                data.transactions.filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0)).toLocaleString()}
+              {((data.transactions || []).filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0) - 
+                (data.transactions || []).filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0)).toLocaleString()}
             </h3>
           </Card>
         </div>
@@ -2117,7 +2383,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </tr>
                 ) : (
                   filteredTransactions.map(t => (
-                    <tr key={t.id} className="hover:bg-[var(--bg-main)] transition-colors">
+                    <tr key={`${t.id}-transaction-row`} className="hover:bg-[var(--bg-main)] transition-colors">
                     <td className="px-6 py-6">
                       <p className="font-bold text-[var(--text-main)] text-lg mb-2">{t.description}</p>
                       <div className="flex flex-wrap gap-2">
@@ -2152,7 +2418,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.receiptItems && t.receiptItems.length > 0 && (
                           <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={i} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
+                              <div key={`${i}-receipt-item-display`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
                                 <span>{item.name}</span>
                                 <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
@@ -2361,7 +2627,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'savings', label: 'پاشەکەوت', icon: PiggyBank },
                   ].map(tab => (
                     <button
-                      key={tab.id}
+                      key={`${tab.id}-sidebar-tab`}
                       onClick={() => {
                         setActiveTab(tab.id as any);
                         setShowSidebar(false);
@@ -2424,7 +2690,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   <div className="grid grid-cols-2 gap-2">
                     {['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].map(type => (
                       <button
-                        key={type}
+                        key={`${type}-work-type-btn`}
                         onClick={() => {
                           const current = newTask.workTypes || [];
                           const next = current.includes(type) 
@@ -2472,7 +2738,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   {/* Selected Custom Types */}
                   <div className="flex flex-wrap gap-2 mt-2">
                     {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t, i) => (
-                      <div key={i} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
+                      <div key={`${i}-custom-work-type`} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
                         <span 
                           contentEditable 
                           suppressContentEditableWarning
@@ -2517,7 +2783,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   
                   <div className="space-y-3">
                     {(newTask.details || [{ subject: '', work: '' }]).map((detail, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
+                      <div key={`${idx}-new-task-detail`} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
                         <div className="col-span-5 space-y-1">
                           <label className="text-[10px] font-bold text-[var(--text-muted)]">بابەت</label>
                           <HistoryInput 
@@ -2642,7 +2908,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <div className="flex flex-wrap gap-2 mt-2">
                       {(data.descriptions || []).slice(0, 12).map((d, i) => (
                         <button 
-                          key={i}
+                          key={`${i}-description-history`}
                           onClick={() => setNewTransaction(p => ({ ...p, description: d }))}
                           className="text-[10px] font-bold bg-[var(--bg-main)] hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-lg transition-colors text-[var(--text-main)]"
                         >
@@ -2798,7 +3064,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                               {newTransaction.receiptItems.map((item, idx) => (
-                                <tr key={idx}>
+                                <tr key={`${idx}-receipt-item-preview`}>
                                   <td className="px-3 py-2 font-bold">{item.name}</td>
                                   <td className="px-3 py-2 text-center">{item.quantity || '-'}</td>
                                   <td className="px-3 py-2 text-center">{(item.unitPrice || item.price).toLocaleString()}</td>
@@ -2900,7 +3166,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <div className="grid grid-cols-4 gap-1">
                         {['بەنزین', 'گاز', 'خاز', 'نەفت'].map(type => (
                           <button
-                            key={type}
+                            key={`${type}-fuel-type-btn`}
                             onClick={() => setNewTransaction(p => ({ ...p, fuelType: type as any }))}
                             className={cn(
                               "py-1.5 rounded-lg text-[10px] font-bold transition-all border-2",
@@ -2934,7 +3200,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <label className="text-sm font-black text-[var(--text-muted)] mr-1">وەسڵ (بابەت و نرخ)</label>
                       <div className="space-y-3">
                         {(newTransaction.receiptItems || []).map((item, index) => (
-                          <div key={index} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
+                          <div key={`${index}-receipt-item-input`} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەت</label>
                               <HistoryInput 
@@ -3190,11 +3456,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               setNewTransaction(prev => ({
                 ...prev,
                 description: result.shopName || prev.description,
-                amount: result.totalAmount || prev.amount,
+                amount: result.amount || prev.amount,
                 customerName: result.customerName || prev.customerName,
+                driverName: result.driverName || prev.driverName,
                 invoiceNumber: result.invoiceNumber || prev.invoiceNumber,
                 date: result.date || prev.date,
-                receiptItems: (result.items || []).map((item: any) => ({
+                discount: result.discount || prev.discount,
+                paidAmount: result.paidAmount || prev.paidAmount,
+                remainingAmount: result.remainingAmount || prev.remainingAmount,
+                debtAmount: result.debtAmount || prev.debtAmount,
+                receiptItems: (result.items || []).map((item: any, i: number) => ({
                   ...item,
                   quantity: item.quantity || 1,
                   unitPrice: item.unitPrice || item.price,
@@ -3315,6 +3586,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             </motion.div>
           </div>
         )}
+
+        <VoiceCommandModal 
+          isOpen={showVoiceModal} 
+          onClose={() => setShowVoiceModal(false)} 
+          onCommand={handleVoiceCommand}
+          isListening={isListening}
+          setIsListening={setIsListening}
+          message={voiceMessage}
+          setVoiceMessage={setVoiceMessage}
+        />
       </AnimatePresence>
     </div>
   );
