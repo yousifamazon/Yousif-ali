@@ -51,7 +51,8 @@ import {
   MicOff,
   BrainCircuit,
   Lightbulb,
-  Zap as ZapIcon
+  Zap as ZapIcon,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarcodeScanner } from './components/BarcodeScanner';
@@ -76,7 +77,8 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product } from './types';
+import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, MaintenanceInvoice } from './types';
+import { MaintenanceInvoiceManager } from './components/MaintenanceInvoiceManager';
 import { 
   getStoredData, 
   saveToStorage, 
@@ -85,6 +87,8 @@ import {
   deleteTaskFromFirebase,
   syncTransactionToFirebase,
   deleteTransactionFromFirebase,
+  syncMaintenanceInvoiceToFirebase,
+  deleteMaintenanceInvoiceFromFirebase,
   syncSettingsToFirebase,
   resetFirebaseData,
   syncWishlistToFirebase,
@@ -105,7 +109,7 @@ import {
   OperationType 
 } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc, getDocs, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, getDocs, getDoc, setDoc } from 'firebase/firestore';
 
 // Polyfill for crypto.randomUUID if not available
 if (typeof crypto === 'undefined') {
@@ -255,9 +259,13 @@ const VoiceCommandModal = ({
       mediaRecorder.start();
       setIsListening(true);
       setVoiceMessage("گوێم لێیە، قسە بکە...");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error accessing microphone:", error);
-      setVoiceMessage("تکایە ڕێگە بدە بە بەکارهێنانی مایکڕۆفۆن لە ڕێکخستنەکانی وێبگەڕەکەتدا.");
+      if (error.name === 'NotAllowedError' || error.message?.includes('Permission denied')) {
+        setVoiceMessage("ڕێگە نەدرا بە مایکڕۆفۆن. تکایە ڕێگە بە مایکڕۆفۆن بدە، یان ئەپەکە لە تابێکی نوێدا بکەرەوە (Open in new tab).");
+      } else {
+        setVoiceMessage("کێشەیەک هەیە لە کردنەوەی مایکڕۆفۆن. دڵنیابە کە مایکڕۆفۆنەکەت کار دەکات.");
+      }
       setIsListening(false);
     }
   };
@@ -1074,6 +1082,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       setProducts(products);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/products`));
 
+    const maintenanceQuery = query(collection(db, `users/${user.uid}/maintenanceInvoices`), orderBy('createdAt', 'desc'));
+    const unsubMaintenance = onSnapshot(maintenanceQuery, (snapshot) => {
+      if (isMigrating && snapshot.empty) return;
+      const maintenanceInvoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceInvoice));
+      setData(prev => ({ ...prev, maintenanceInvoices }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/maintenanceInvoices`));
+
     return () => {
       unsubTasks();
       unsubTrans();
@@ -1082,6 +1097,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       unsubDebts();
       unsubSavings();
       unsubProducts();
+      unsubMaintenance();
     };
   }, [user]);
 
@@ -1847,6 +1863,35 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             </Card>
           ))}
         </div>
+      </div>
+    );
+  };
+
+  const renderMaintenanceInvoices = () => {
+    return (
+      <div className="space-y-6 pb-24">
+        <MaintenanceInvoiceManager 
+          invoices={data.maintenanceInvoices || []}
+          onSave={async (invoice) => {
+            setData(prev => {
+              const exists = prev.maintenanceInvoices?.find(i => i.id === invoice.id);
+              const newInvoices = exists 
+                ? (prev.maintenanceInvoices || []).map(i => i.id === invoice.id ? invoice : i)
+                : [invoice, ...(prev.maintenanceInvoices || [])];
+              return { ...prev, maintenanceInvoices: newInvoices };
+            });
+            await syncMaintenanceInvoiceToFirebase(invoice);
+          }}
+          onDelete={async (id) => {
+            if (window.confirm('دڵنیایت لە سڕینەوەی ئەم وەسڵە؟')) {
+              setData(prev => ({
+                ...prev,
+                maintenanceInvoices: (prev.maintenanceInvoices || []).filter(i => i.id !== id)
+              }));
+              await deleteMaintenanceInvoiceFromFirebase(id);
+            }
+          }}
+        />
       </div>
     );
   };
@@ -2803,6 +2848,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'dashboard', label: 'داشبۆرد', icon: LayoutDashboard },
                     { id: 'tasks', label: 'ئەرکەکان', icon: CheckSquare },
                     { id: 'personal', label: 'دارایی', icon: Wallet },
+                    { id: 'maintenance', label: 'وەسڵی سیانە', icon: FileText },
                     { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
                     { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
                     { id: 'savings', label: 'پاشەکەوت', icon: Vault },
@@ -2843,6 +2889,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'dashboard' && renderDashboard()}
               {activeTab === 'tasks' && renderTasks()}
               {activeTab === 'personal' && renderFinance('personal')}
+              {activeTab === 'maintenance' && renderMaintenanceInvoices()}
               {activeTab === 'wishlist' && renderWishlist()}
               {activeTab === 'debts' && renderDebts()}
               {activeTab === 'savings' && renderSavings()}

@@ -81,8 +81,37 @@
       "type": "object",
       "properties": {
         "descriptions": { "type": "array", "items": { "type": "string" } },
-        "history": { "type": "object" }
+        "history": { "type": "object" },
+        "customTabs": { "type": "array", "items": { "type": "string" } }
       }
+    },
+    "MaintenanceInvoice": {
+      "title": "MaintenanceInvoice",
+      "description": "A maintenance invoice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "customerName": { "type": "string" },
+        "mobile": { "type": "string" },
+        "deviceInfo": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "discount": { "type": "number" },
+        "totalAfterDiscount": { "type": "number" },
+        "cashPaid": { "type": "number" },
+        "debtAmount": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "technicianName": { "type": "string" },
+        "warranty": { "type": "string" },
+        "notes": { "type": "string" },
+        "receivedFromFactory": { "type": "number" },
+        "factoryOwesMe": { "type": "number" },
+        "iOweFactory": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "invoiceNumber", "date", "customerName", "createdAt"]
     }
   },
   "firestore": {
@@ -97,6 +126,10 @@
     "/users/{userId}/settings/main": {
       "schema": "Settings",
       "description": "User's settings"
+    },
+    "/users/{userId}/maintenanceInvoices/{invoiceId}": {
+      "schema": "MaintenanceInvoice",
+      "description": "User's maintenance invoices"
     }
   }
 }

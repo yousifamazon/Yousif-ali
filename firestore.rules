@@ -154,6 +154,15 @@ service cloud.firestore {
              data.createdAt is string && isValidDateTime(data.createdAt);
     }
 
+    function isValidMaintenanceInvoice(data) {
+      return data.id is string &&
+             data.invoiceNumber is string &&
+             data.date is string &&
+             data.customerName is string &&
+             data.createdAt is string &&
+             data.userId == request.auth.uid;
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -161,6 +170,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId);
       
+      match /maintenanceInvoices/{invoiceId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidMaintenanceInvoice(request.resource.data);
+        allow update: if isOwner(userId) && isValidMaintenanceInvoice(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
       match /products/{productId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidProduct(request.resource.data);

@@ -96,6 +96,39 @@ export type Product = {
   createdAt: string;
 };
 
+export type MaintenanceItem = {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export type MaintenanceInvoice = {
+  id: string;
+  invoiceNumber: string;
+  date: string;
+  customerName: string;
+  mobile: string;
+  deviceInfo: string;
+  items: MaintenanceItem[];
+  totalAmount: number;
+  discount: number;
+  totalAfterDiscount: number;
+  cashPaid: number;
+  debtAmount: number;
+  remainingBalance: number;
+  technicianName: string;
+  warranty: string;
+  notes: string;
+  receivedFromFactory: number;
+  factoryOwesMe: number;
+  iOweFactory: number;
+  createdAt: string;
+  userId?: string;
+};
+
 export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
@@ -103,6 +136,7 @@ export type AppData = {
   debts?: Debt[];
   savingsGoals?: SavingsGoal[];
   products?: Product[];
+  maintenanceInvoices?: MaintenanceInvoice[];
   descriptions: string[];
   history?: Record<string, string[]>;
   customTabs?: string[];

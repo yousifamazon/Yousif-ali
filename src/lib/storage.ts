@@ -1,4 +1,4 @@
-import { AppData, Task, Transaction } from "../types";
+import { AppData, Task, Transaction, MaintenanceInvoice } from "../types";
 import { 
   db, 
   auth, 
@@ -82,6 +82,30 @@ const removeUndefined = (obj: any): any => {
 };
 
 // --- Firebase Sync Helpers ---
+
+export const syncMaintenanceInvoiceToFirebase = async (invoice: MaintenanceInvoice) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/maintenanceInvoices/${invoice.id}`;
+  try {
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    if (!existingDoc.exists() || JSON.stringify(existingDoc.data()) !== JSON.stringify(invoice)) {
+      await setDoc(docRef, invoice);
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const deleteMaintenanceInvoiceFromFirebase = async (id: string) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/maintenanceInvoices/${id}`;
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
 
 export const syncTaskToFirebase = async (task: Task) => {
   if (!auth.currentUser) return;
