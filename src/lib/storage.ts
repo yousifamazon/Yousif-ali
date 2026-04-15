@@ -149,7 +149,13 @@ export const syncTransactionToFirebase = async (transaction: Transaction) => {
   try {
     const docRef = doc(db, path);
     const existingDoc = await getDoc(docRef);
-    const createdAt = existingDoc.exists() ? existingDoc.data().createdAt : (transaction.date + 'T00:00:00Z');
+    
+    let createdAt = transaction.date + 'T00:00:00Z';
+    if (existingDoc.exists() && existingDoc.data().createdAt) {
+      createdAt = existingDoc.data().createdAt;
+    } else if (transaction.createdAt) {
+      createdAt = transaction.createdAt;
+    }
 
     const dataToSync = removeUndefined({
       ...transaction,

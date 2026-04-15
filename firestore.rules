@@ -176,7 +176,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidMaintenanceInvoice(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
@@ -186,7 +186,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidProduct(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
@@ -196,7 +196,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidTask(request.resource.data) && 
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
@@ -206,7 +206,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidTransaction(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
@@ -216,7 +216,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidWishlistItem(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
@@ -226,7 +226,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidDebt(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
@@ -236,7 +236,7 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidSavingsGoal(request.resource.data) &&
                          request.resource.data.id == resource.data.id &&
                          request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.createdAt == resource.data.createdAt;
+                         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
         allow delete: if isOwner(userId);
       }
 
