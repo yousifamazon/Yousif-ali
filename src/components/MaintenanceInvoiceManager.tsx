@@ -553,6 +553,27 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         </Button>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/30">
+          <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mb-1">کۆی گشتی سەرفکراو</p>
+          <p className="text-2xl font-black text-blue-700 dark:text-blue-300">
+            {invoices.reduce((sum, inv) => sum + (inv.totalAfterDiscount || 0), 0).toLocaleString()} د.ع
+          </p>
+        </div>
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border border-red-100 dark:border-red-800/30">
+          <p className="text-sm text-red-600 dark:text-red-400 font-bold mb-1">کارگە قەرزدارە</p>
+          <p className="text-2xl font-black text-red-700 dark:text-red-300">
+            {invoices.reduce((sum, inv) => sum + (inv.factoryOwesMe || 0), 0).toLocaleString()} د.ع
+          </p>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-100 dark:border-green-800/30">
+          <p className="text-sm text-green-600 dark:text-green-400 font-bold mb-1">پارەی کارگە لای من ماوە</p>
+          <p className="text-2xl font-black text-green-700 dark:text-green-300">
+            {invoices.reduce((sum, inv) => sum + (inv.iOweFactory || 0), 0).toLocaleString()} د.ع
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {invoices.map(invoice => (
           <motion.div 

@@ -1873,14 +1873,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         <MaintenanceInvoiceManager 
           invoices={data.maintenanceInvoices || []}
           onSave={async (invoice) => {
+            const invoiceWithUser = { ...invoice, userId: user?.uid };
             setData(prev => {
-              const exists = prev.maintenanceInvoices?.find(i => i.id === invoice.id);
+              const exists = prev.maintenanceInvoices?.find(i => i.id === invoiceWithUser.id);
               const newInvoices = exists 
-                ? (prev.maintenanceInvoices || []).map(i => i.id === invoice.id ? invoice : i)
-                : [invoice, ...(prev.maintenanceInvoices || [])];
+                ? (prev.maintenanceInvoices || []).map(i => i.id === invoiceWithUser.id ? invoiceWithUser : i)
+                : [invoiceWithUser, ...(prev.maintenanceInvoices || [])];
               return { ...prev, maintenanceInvoices: newInvoices };
             });
-            await syncMaintenanceInvoiceToFirebase(invoice);
+            await syncMaintenanceInvoiceToFirebase(invoiceWithUser);
           }}
           onDelete={async (id) => {
             if (window.confirm('دڵنیایت لە سڕینەوەی ئەم وەسڵە؟')) {

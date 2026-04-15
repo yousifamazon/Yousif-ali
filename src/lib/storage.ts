@@ -89,8 +89,14 @@ export const syncMaintenanceInvoiceToFirebase = async (invoice: MaintenanceInvoi
   try {
     const docRef = doc(db, path);
     const existingDoc = await getDoc(docRef);
-    if (!existingDoc.exists() || JSON.stringify(existingDoc.data()) !== JSON.stringify(invoice)) {
-      await setDoc(docRef, invoice);
+    
+    const dataToSync = removeUndefined({
+      ...invoice,
+      userId: auth.currentUser.uid
+    });
+
+    if (!existingDoc.exists() || JSON.stringify(existingDoc.data()) !== JSON.stringify(dataToSync)) {
+      await setDoc(docRef, dataToSync);
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
