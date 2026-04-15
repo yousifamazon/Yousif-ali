@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { MaintenanceInvoice, MaintenanceItem } from '../types';
-import { Plus, Trash2, Printer, Save, FileText } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileText, Download } from 'lucide-react';
 import { Button } from './Button';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import html2canvas from 'html2canvas';
 
 interface Props {
   invoices: MaintenanceInvoice[];
@@ -289,6 +290,181 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
     printWindow.document.close();
   };
 
+  const handleDownloadImage = async (invoice: MaintenanceInvoice) => {
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .invoice-paper { background-color: #fff; padding: 20px; width: 148mm; min-height: 210mm; box-sizing: border-box; color: #000; direction: rtl; font-family: Arial, Helvetica, sans-serif; font-size: 13px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+        .header-text { width: 33%; line-height: 1.2; font-size: 12px; }
+        .header-logo { width: 34%; text-align: center; display: flex; flex-direction: column; align-items: center;}
+        .header h3 { margin: 0; font-size: 20px; font-weight: bold; color: #222;}
+        .header p { margin: 3px 0; font-size: 13px; font-weight: bold;}
+        .invoice-title-container { border-bottom: 1px solid #000; margin-bottom: 15px; padding-bottom: 10px;}
+        .invoice-title { background-color: #e0e0e0; padding: 3px 15px; font-weight: bold; border: 1px solid #000; width: fit-content; margin-top: 5px; font-size: 14px; }
+        .info-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .info-box { border: 1px solid #000; padding: 5px 10px; width: 47%; border-radius: 5px; line-height: 1.6; }
+        .gray-bg { background-color: #e0e0e0 !important; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center; font-size: 12px; }
+        table, th, td { border: 1px solid #000; }
+        th { background-color: #f0f0f0; padding: 6px; font-weight: bold; }
+        td { padding: 4px; height: 25px; } 
+        .desc-column { width: 45%; text-align: right; padding-right: 8px !important;}
+        .bottom-section { display: flex; justify-content: space-between; align-items: flex-start; font-size: 12px; }
+        .totals-details { width: 45%; border: 1px solid #000; }
+        .totals-details div { display: flex; justify-content: space-between; padding: 4px 6px; border-bottom: 1px solid #000; }
+        .totals-details div:last-child { border-bottom: none; }
+        .totals-details .bold-total { background-color: #e0e0e0; font-weight: bold; }
+        .payment-details { width: 45%; border: 1px solid #000; border-radius: 5px; overflow: hidden; }
+        .payment-title { text-align: center; background: #e0e0e0; padding: 4px; border-bottom: 1px solid #000; font-weight: bold; }
+        .payment-details div { display: flex; justify-content: space-between; padding: 4px 6px; min-height: 20px;}
+        .footer-notes { margin-top: 15px; font-size: 12px;}
+        .notes-box { border: 1px solid #000; background-color: #e0e0e0; width: 180px; float: left; text-align: right; border-radius: 5px; overflow: hidden; min-height: 60px; }
+        .notes-title { background:#222; color:#fff; text-align:center; padding:3px; font-weight:bold; }
+        .notes-content { padding: 5px; text-align: right; }
+        .signatures { clear: both; padding-top: 40px; display: flex; justify-content: space-between; font-size: 12px;}
+    `;
+    
+    const itemsHtml = invoice.items.map((item, index) => `
+      <tr>
+          <td>${item.total.toLocaleString()}</td>
+          <td>${item.unitPrice.toLocaleString()}</td>
+          <td>${item.quantity}</td>
+          <td>${item.unit}</td>
+          <td class="desc-column">${item.name}</td>
+          <td>${index + 1}</td>
+      </tr>
+    `).join('');
+
+    const invoiceHtml = `
+      <div class="invoice-paper" id="invoice-capture-${invoice.id}">
+        <div class="header">
+            <div class="header-text" style="text-align: right;">
+                <h3>خەرجی کارگە</h3>
+            </div>
+            <div class="header-logo">
+                <svg width="55" height="55" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#333" d="M62.3,28.4l-4.7-0.7c-0.4-1.9-1.1-3.8-2-5.5l2.9-3.8c1-1.3,0.8-3.2-0.4-4.4L53.7,9.5c-1.2-1.2-3.1-1.4-4.4-0.4l-3.8,2.9 c-1.7-1-3.5-1.7-5.5-2l-0.7-4.7C39,3.1,37.1,1.5,34.9,1.5h-5.8c-2.2,0-4.1,1.6-4.4,3.8l-0.7,4.7c-1.9,0.4-3.8,1.1-5.5,2l-3.8-2.9 c-1.3-1-3.2-0.8-4.4,0.4L5.9,14c-1.2,1.2-1.4,3.1-0.4,4.4l2.9,3.8c-1,1.7-1.7,3.5-2,5.5l-4.7,0.7C-0.5,28.6-2,30.6-2,32.8v5.8 c0,2.2,1.6,4.1,3.8,4.4l4.7,0.7c0.4,1.9,1.1,3.8,2,5.5l-2.9,3.8c-1,1.3-0.8,3.2,0.4,4.4l4.4,4.4c1.2,1.2,3.1,1.4,4.4,0.4l3.8-2.9 c1.7,1,3.5,1.7,5.5,2l0.7,4.7c0.3,2.2,2.2,3.8,4.4,3.8h5.8c2.2,0,4.1-1.6,4.4-3.8l0.7-4.7c1.9-0.4,3.8-1.1,5.5-2l3.8,2.9 c1.3,1,3.2,0.8,4.4-0.4l4.4-4.4c1.2-1.2,1.4-3.1,0.4-4.4l-2.9-3.8c1-1.7,1.7-3.5,2-5.5l4.7-0.7c2.2-0.3,3.8-2.2,3.8-4.4v-5.8 C64.1,30.6,62.5,28.6,62.3,28.4z M32,46.5c-8,0-14.5-6.5-14.5-14.5S24,17.5,32,17.5S46.5,24,46.5,32S40,46.5,32,46.5z"/>
+                    <path fill="#fff" d="M44.7,19.5c-1.9-1.9-4.8-2.3-7.1-1.1L24.1,31.9c-1.5-0.3-3.2,0.1-4.3,1.3c-1.8,1.8-1.8,4.7,0,6.5c1.8,1.8,4.7,1.8,6.5,0 c1.2-1.2,1.6-2.8,1.3-4.3L41.1,21.9C42.4,24.3,46.6,21.4,44.7,19.5z"/>
+                </svg>
+                <p style="font-family: 'Arial Black', sans-serif; font-size: 11px; letter-spacing: 1px; color: #333; margin-top: 5px;">MAINTENANCE</p>
+            </div>
+            <div class="header-text" style="text-align: left;">
+                <p style="direction: rtl; font-size: 13px; margin-bottom: 5px;">ژمارەی مۆبایل:</p>
+                <p style="direction: ltr; font-size: 13px;">0750 994 9094</p>
+                <p style="direction: ltr; font-size: 13px;">0750 726 6362</p>
+            </div>
+        </div>
+
+        <div class="invoice-title-container">
+            <div class="invoice-title">ڕقم <span>${invoice.invoiceNumber}</span></div>
+        </div>
+
+        <div class="info-container">
+            <div class="info-box">
+                <div><strong>پسوولەی کاری سیانە و پارچە</strong></div>
+                <div>ڕێکەوت: <span>${invoice.date}</span></div>
+                <div>کۆپی: بنەڕەت (ئەسڵی)</div>
+            </div>
+            <div class="info-box" style="border:none; padding:0;">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #000; padding-bottom:5px;">
+                    <div>ناوی کڕیار: <strong>${invoice.customerName}</strong></div>
+                    <div>مۆبایل: <span>${invoice.mobile}</span></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding-top:5px;">
+                    <div>زانیاری ئامێر / کار: <strong>${invoice.deviceInfo}</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>کۆی گشتی</th>
+                    <th>نرخی تاک</th>
+                    <th>بڕ</th>
+                    <th>یەکە</th>
+                    <th class="desc-column">وردەکارییەکان (ناوی پارچە / جۆری کار)</th>
+                    <th>ژمارە</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemsHtml}
+            </tbody>
+        </table>
+
+        <div class="bottom-section">
+            <div class="totals-details">
+                <div><span>کۆی گشتی:</span> <span>${invoice.totalAmount.toLocaleString()}</span></div>
+                <div><span>بڕی داشکاندن:</span> <span>${invoice.discount.toLocaleString()}</span></div>
+                <div><span>بڕ دوای داشکاندن:</span> <span>${invoice.totalAfterDiscount.toLocaleString()}</span></div>
+                <div class="bold-total"><span>کۆی گشتیی پسوولە:</span> <strong>${invoice.totalAfterDiscount.toLocaleString()}</strong></div>
+                <div style="text-align:center; font-size:11px; border:none; display:block; padding-top:10px; min-height:15px;">
+                </div>
+            </div>
+
+            <div class="payment-details">
+                <div class="payment-title">تفاصيل الدفع (وردەکاری پارەدان)</div>
+                <div><span>نەقد (کاش):</span> <strong class="gray-bg" style="padding:0 15px;">${invoice.cashPaid.toLocaleString()}</strong></div>
+                <div><span>لەسەر حیساب (قەرز):</span> <span>${invoice.debtAmount.toLocaleString()}</span></div>
+                <div><span>باڵانسی ماوە:</span> <span>${invoice.remainingBalance.toLocaleString()}</span></div>
+            </div>
+        </div>
+
+        <div class="footer-notes">
+            <p style="float: right;">
+                <strong>ناوی تەکنیکار:</strong> <span>${invoice.technicianName}</span><br>
+                <strong>گەرەنتی (ضمان):</strong> <span>${invoice.warranty}</span>
+            </p>
+            
+            <div class="notes-box">
+                <div class="notes-title">ملاحظات (تێبینی)</div>
+                <div class="notes-content">
+                    ${invoice.notes}
+                </div>
+            </div>
+        </div>
+
+        <div class="signatures">
+            <p><strong>واژووی کڕیار (المستلم):</strong> .....................................</p>
+            <p><strong>واژووی سەرپەرشتیار:</strong> .....................................</p>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(style);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = invoiceHtml;
+    container.appendChild(wrapper);
+    document.body.appendChild(container);
+
+    try {
+      const element = document.getElementById(`invoice-capture-${invoice.id}`);
+      if (element) {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        });
+        
+        const image = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `وەسڵی-سیانە-${invoice.invoiceNumber || invoice.id}.png`;
+        link.click();
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      alert('هەڵەیەک ڕوویدا لە کاتی دروستکردنی وێنەکە.');
+    } finally {
+      document.body.removeChild(container);
+    }
+  };
+
   if (isCreating) {
     return (
       <div className="space-y-6">
@@ -298,6 +474,11 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
           </h2>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => { setIsCreating(false); resetForm(); }}>گەڕانەوە</Button>
+            {editingInvoice && (
+              <Button variant="secondary" onClick={() => handleDownloadImage(editingInvoice)} className="flex items-center gap-2">
+                <Download className="w-5 h-5" /> وێنە
+              </Button>
+            )}
             <Button variant="primary" onClick={handleSave} className="flex items-center gap-2">
               <Save className="w-5 h-5" /> پاشەکەوتکردن
             </Button>
@@ -612,6 +793,9 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
               </Button>
               <Button variant="primary" size="sm" onClick={() => handlePrint(invoice)} className="flex-1 flex items-center justify-center gap-2">
                 <Printer className="w-4 h-4" /> پرینت
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => handleDownloadImage(invoice)} className="flex-1 flex items-center justify-center gap-2" title="دابەزاندنی وێنە">
+                <Download className="w-4 h-4" /> وێنە
               </Button>
               <button onClick={() => onDelete(invoice.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl">
                 <Trash2 className="w-5 h-5" />
