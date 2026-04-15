@@ -26,6 +26,7 @@ import {
   Filter,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowLeft,
   CreditCard,
   Zap,
   Milk,
@@ -37,7 +38,7 @@ import {
   Sun, 
   Bell,
   UserMinus,
-  PiggyBank,
+  Vault,
   Camera,
   Image as ImageIcon,
   Share2,
@@ -1136,8 +1137,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     };
 
     if (editingTaskId) {
+      const existingTask = data.tasks.find(t => t.id === editingTaskId);
+      if (!existingTask) {
+        setShowTaskModal(false);
+        setEditingTaskId(null);
+        return;
+      }
       const updatedTask = {
-        ...data.tasks.find(t => t.id === editingTaskId)!,
+        ...existingTask,
         ...taskData
       };
       
@@ -1237,8 +1244,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     }
 
     if (editingTransactionId) {
+      const existingTransaction = data.transactions.find(t => t.id === editingTransactionId);
+      if (!existingTransaction) {
+        setShowTransactionModal(false);
+        setEditingTransactionId(null);
+        return;
+      }
       const updatedTransaction = { 
-        ...data.transactions.find(t => t.id === editingTransactionId)!, 
+        ...existingTransaction, 
         ...transactionData 
       };
       
@@ -1608,6 +1621,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
   const renderWishlist = () => {
     const items = (data.wishlist || []).filter(w => activeWishlistTab === 'general' ? w.type !== 'private' : w.type === 'private');
+    const totalNeeded = items.filter(i => !i.completed).reduce((acc, item) => acc + (item.estimatedPrice || 0), 0);
     
     return (
       <div className="space-y-6 pb-24">
@@ -1643,6 +1657,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           >
             تایبەت
           </button>
+        </div>
+
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-4 flex justify-between items-center">
+          <span className="font-bold text-blue-800 dark:text-blue-300">کۆی گشتی پێویست:</span>
+          <span className="font-black text-xl text-blue-600 dark:text-blue-400">{totalNeeded.toLocaleString()} د.ع</span>
         </div>
 
         <div className="grid gap-4">
@@ -1761,7 +1780,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       <div className="space-y-6 pb-24">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
-            <PiggyBank className="w-7 h-7 text-yellow-600" /> پاشەکەوت
+            <Vault className="w-7 h-7 text-yellow-600" /> پاشەکەوت
           </h2>
           <Button onClick={() => {
             setEditingSavingsId(null);
@@ -1850,6 +1869,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 <h2 className="text-4xl sm:text-5xl font-black tracking-tight">
                   {stats.balance.toLocaleString()} <span className="text-xl font-normal opacity-80">د.ع</span>
                 </h2>
+                <p className="text-blue-200 text-sm mt-2 font-bold flex items-center gap-1">
+                  <Vault className="w-4 h-4" /> کۆی پاشەکەوت: {stats.personalSavings.toLocaleString()} د.ع
+                </p>
               </div>
               <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
                 <Wallet className="w-8 h-8" />
@@ -1867,6 +1889,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 setShowTransactionModal(true);
               }}>
                 <ArrowUpRight className="w-4 h-4" /> خەرجی
+              </Button>
+              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4 rounded-xl" onClick={() => {
+                setNewTransaction({ ...initialTransactionState, type: 'savings', category: 'personal', savingsEffect: 'subtract' });
+                setShowTransactionModal(true);
+              }}>
+                <Vault className="w-4 h-4" /> هەڵگرتن
               </Button>
             </div>
           </div>
@@ -1899,7 +1927,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   )}
                 >
                   <div className="mt-1">
-                    {insight.type === 'saving' ? <PiggyBank className="w-4 h-4 text-green-500" /> : 
+                    {insight.type === 'saving' ? <Vault className="w-4 h-4 text-green-500" /> : 
                      insight.type === 'spending' ? <TrendingDown className="w-4 h-4 text-red-500" /> :
                      insight.type === 'debt' ? <AlertCircle className="w-4 h-4 text-amber-500" /> :
                      <Lightbulb className="w-4 h-4 text-blue-500" />}
@@ -1951,6 +1979,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <p className="text-[10px] text-blue-500 font-bold">٢ ئیشی گرنگ ماوە</p>
           </div>
         </Card>
+
+        <Card className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900/20 flex flex-col justify-between">
+          <p className="text-xs font-bold text-yellow-700 dark:text-yellow-400">کۆی پاشەکەوت</p>
+          <div className="mt-2">
+            <h4 className="text-xl font-black text-yellow-600">{(data.savingsGoals || []).reduce((acc, g) => acc + g.currentAmount, 0).toLocaleString()}</h4>
+            <p className="text-[10px] text-yellow-500 font-bold">{(data.savingsGoals || []).length} ئامانجی پاشەکەوت</p>
+          </div>
+        </Card>
       </div>
 
       {/* Voice Command Floating Button */}
@@ -1974,18 +2010,22 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           { icon: Fuel, label: 'بەنزین', color: 'bg-red-50 dark:bg-red-900/20 text-red-600' },
           { icon: ShoppingCart, label: 'مارکێت', color: 'bg-green-50 dark:bg-green-900/20 text-green-600' },
           { icon: Zap, label: 'کارەبا', color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' },
-          { icon: User, label: 'خەرجی تر', color: 'bg-[var(--bg-main)] text-[var(--text-muted)]' },
+          { icon: Vault, label: 'پاشەکەوت', color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600' },
         ].map((action, i) => (
           <button 
             key={`${i}-quick-action`} 
             onClick={() => {
-              setNewTransaction({ 
-                ...initialTransactionState,
-                description: action.label, 
-                category: 'personal',
-                type: 'expense'
-              });
-              setShowTransactionModal(true);
+              if (action.label === 'پاشەکەوت') {
+                setActiveTab('savings');
+              } else {
+                setNewTransaction({ 
+                  ...initialTransactionState,
+                  description: action.label, 
+                  category: 'personal',
+                  type: 'expense'
+                });
+                setShowTransactionModal(true);
+              }
             }}
             className="p-4 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2 group active:scale-95"
           >
@@ -1996,6 +2036,45 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </button>
         ))}
       </div>
+
+      {/* Savings Goals Section (Dashboard) */}
+      {(data.savingsGoals || []).length > 0 && (
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black text-[var(--text-main)] flex items-center gap-2">
+              <Vault className="w-6 h-6 text-yellow-600" /> ئامانجەکانی پاشەکەوت
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab('savings')} className="text-blue-600 font-bold">
+              بینینی هەمووی <ArrowLeft className="w-4 h-4 mr-1" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(data.savingsGoals || []).slice(0, 2).map(goal => {
+              const progress = (goal.currentAmount / goal.targetAmount) * 100;
+              return (
+                <Card key={`${goal.id}-dash-savings`} className="p-5 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-bold">{goal.title}</h4>
+                    <span className="text-xs font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
+                      {Math.round(progress)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-[var(--bg-main)] rounded-full h-2 overflow-hidden">
+                    <div 
+                      className={cn("h-full transition-all duration-500", progress >= 100 ? "bg-green-500" : "bg-blue-500")} 
+                      style={{ width: `${Math.min(progress, 100)}%` }} 
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)]">
+                    <span>{goal.currentAmount.toLocaleString()} د.ع</span>
+                    <span>{goal.targetAmount.toLocaleString()} د.ع</span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
           {/* Export Actions */}
           <div className="grid grid-cols-3 gap-3 no-print">
@@ -2155,8 +2234,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       </button>
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
-                          {(task.workTypes || []).map((wt) => (
-                            <span key={wt} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                          {(task.workTypes || []).map((wt, i) => (
+                            <span key={`${wt}-${i}`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
                         <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
@@ -2294,7 +2373,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {category === 'personal' && (data.descriptions || []).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {(data.descriptions || []).map((cat, idx) => (
-                <div key={cat} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
+                <div key={`${cat}-${idx}`} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
                   {editingDescription?.index === idx ? (
                     <input 
                       autoFocus
@@ -2626,7 +2705,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'personal', label: 'دارایی', icon: Wallet },
                     { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
                     { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
-                    { id: 'savings', label: 'پاشەکەوت', icon: PiggyBank },
+                    { id: 'savings', label: 'پاشەکەوت', icon: Vault },
                   ].map(tab => (
                     <button
                       key={`${tab.id}-sidebar-tab`}
@@ -2739,8 +2818,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                   {/* Selected Custom Types */}
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t) => (
-                      <div key={t} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
+                    {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t, i) => (
+                      <div key={`${t}-${i}`} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
                         <span 
                           contentEditable 
                           suppressContentEditableWarning
@@ -2908,9 +2987,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   />
                   {newTransaction.category === 'personal' && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {(data.descriptions || []).slice(0, 12).map((d) => (
+                      {(data.descriptions || []).slice(0, 12).map((d, i) => (
                         <button 
-                          key={d}
+                          key={`${d}-${i}`}
                           onClick={() => setNewTransaction(p => ({ ...p, description: d }))}
                           className="text-[10px] font-bold bg-[var(--bg-main)] hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-lg transition-colors text-[var(--text-main)]"
                         >
@@ -3537,7 +3616,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
               <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
                 <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
-                  <PiggyBank className="w-8 h-8 text-green-600" />
+                  <Vault className="w-8 h-8 text-green-600" />
                   {editingSavingsId ? 'دەستکاری ئامانج' : 'ئامانجی نوێ'}
                 </h3>
                 <button onClick={() => setShowSavingsModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
