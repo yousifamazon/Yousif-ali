@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MaintenanceInvoice, MaintenanceItem } from '../types';
-import { Plus, Trash2, Printer, Save, FileText, Download } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle } from 'lucide-react';
 import { Button } from './Button';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
@@ -123,6 +123,18 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
     setIsCreating(true);
   };
 
+  const handleMarkAsPaid = (invoice: MaintenanceInvoice) => {
+    if (window.confirm('دڵنیایت کە پارەی ئەم وەسڵە وەرگیراوە؟')) {
+      const updatedInvoice = {
+        ...invoice,
+        cashPaid: invoice.cashPaid + invoice.debtAmount,
+        debtAmount: 0,
+        remainingBalance: 0
+      };
+      onSave(updatedInvoice);
+    }
+  };
+
   const handlePrint = (invoice: MaintenanceInvoice) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -176,6 +188,22 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         .notes-title { background:#222; color:#fff; text-align:center; padding:3px; font-weight:bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
         .notes-content { padding: 5px; text-align: right; }
         .signatures { clear: both; padding-top: 40px; display: flex; justify-content: space-between; font-size: 12px;}
+        .paid-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            border: 5px solid #4caf50;
+            color: #4caf50;
+            font-size: 60px;
+            font-weight: bold;
+            padding: 10px 30px;
+            border-radius: 15px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+        }
         @media print {
             body { background-color: #fff; padding: 0; margin: 0; }
             .invoice-paper { width: 100%; margin: 0; padding: 10px; box-shadow: none; border: none; }
@@ -186,6 +214,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
 </head>
 <body>
     <div class="invoice-paper">
+        ${invoice.debtAmount === 0 ? '<div class="paid-stamp">وەرگیراوە</div>' : ''}
         <div class="header">
             <div class="header-text" style="text-align: right;">
                 <h3>خەرجی کارگە</h3>
@@ -327,6 +356,22 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         .notes-title { background:#222; color:#fff; text-align:center; padding:3px; font-weight:bold; }
         .notes-content { padding: 5px; text-align: right; }
         .signatures { clear: both; padding-top: 40px; display: flex; justify-content: space-between; font-size: 12px;}
+        .paid-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            border: 5px solid #4caf50;
+            color: #4caf50;
+            font-size: 60px;
+            font-weight: bold;
+            padding: 10px 30px;
+            border-radius: 15px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+        }
     `;
     
     const itemsHtml = invoice.items.map((item, index) => `
@@ -342,6 +387,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
 
     const invoiceHtml = `
       <div class="invoice-paper" id="invoice-capture-${invoice.id}">
+        ${invoice.debtAmount === 0 ? '<div class="paid-stamp">وەرگیراوە</div>' : ''}
         <div class="header">
             <div class="header-text" style="text-align: right;">
                 <h3>خەرجی کارگە</h3>
@@ -572,6 +618,26 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                     ڕقم 
                     <input type="text" className="inv-input inline" style={{width: '80px', marginRight: '10px'}} value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="000" />
                   </div>
+                  {debtAmount === 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      left: '20px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: '#e8f5e9',
+                      color: '#2e7d32',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      border: '1px solid #c8e6c9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}>
+                      <CheckCircle className="w-4 h-4" /> وەرگیراوە
+                    </div>
+                  )}
               </div>
 
               <div className="info-container">
@@ -784,7 +850,14 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
           >
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-bold text-lg text-[var(--text-main)]">{invoice.customerName || 'بێ ناو'}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg text-[var(--text-main)]">{invoice.customerName || 'بێ ناو'}</h3>
+                  {invoice.debtAmount === 0 && (
+                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> وەرگیراوە
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-[var(--text-muted)]">{invoice.date} - ڕقم: {invoice.invoiceNumber}</p>
               </div>
               <div className="text-left">
@@ -812,16 +885,26 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
               </div>
             )}
 
-            <div className="flex gap-2 pt-2 border-t border-[var(--border-color)]">
+            <div className="flex gap-2 pt-2 border-t border-[var(--border-color)] flex-wrap">
               <Button variant="secondary" size="sm" onClick={() => handleEdit(invoice)} className="flex-1 flex items-center justify-center gap-2">
                 <FileText className="w-4 h-4" /> بینین
               </Button>
               <Button variant="primary" size="sm" onClick={() => handlePrint(invoice)} className="flex-1 flex items-center justify-center gap-2">
                 <Printer className="w-4 h-4" /> پرینت
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => handleDownloadImage(invoice)} className="flex-1 flex items-center justify-center gap-2" title="دابەزاندنی وێنە">
+              <Button variant="secondary" size="sm" onClick={() => handleDownloadImage(invoice)} className="flex-1 flex items-center justify-center gap-2">
                 <Download className="w-4 h-4" /> وێنە
               </Button>
+              {invoice.debtAmount > 0 && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => handleMarkAsPaid(invoice)} 
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
+                >
+                  <CheckCircle className="w-4 h-4" /> وەرگیرا
+                </Button>
+              )}
               <button onClick={() => onDelete(invoice.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl">
                 <Trash2 className="w-5 h-5" />
               </button>

@@ -56,6 +56,7 @@ export type Transaction = {
   remainingAmount?: number;
   debtAmount?: number;
   savingsEffect?: 'add' | 'subtract' | 'none';
+  createdAt?: string;
 };
 
 export type Debt = {
