@@ -761,7 +761,12 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
             key={invoice.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-sm border border-[var(--border-color)] space-y-4"
+            className={cn(
+              "rounded-3xl p-6 shadow-sm border space-y-4",
+              invoice.debtAmount > 0 
+                ? "bg-red-50 dark:bg-red-900/10 border-red-500" 
+                : "bg-[var(--bg-card)] border-[var(--border-color)]"
+            )}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -776,6 +781,12 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
             <div className="text-sm text-[var(--text-muted)] line-clamp-2">
               {invoice.deviceInfo}
             </div>
+
+            {invoice.debtAmount > 0 && (
+              <div className="text-sm font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-2 rounded-lg inline-block">
+                قەرز: {invoice.debtAmount.toLocaleString()} د.ع
+              </div>
+            )}
 
             {(invoice.factoryOwesMe > 0 || invoice.iOweFactory > 0) && (
               <div className="text-xs font-bold p-2 rounded-lg bg-[var(--bg-main)] border border-[var(--border-color)]">
