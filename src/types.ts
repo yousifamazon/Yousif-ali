@@ -105,4 +105,5 @@ export type AppData = {
   products?: Product[];
   descriptions: string[];
   history?: Record<string, string[]>;
+  customTabs?: string[];
 };

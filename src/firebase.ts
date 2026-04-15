@@ -24,6 +24,7 @@ import firebaseConfig from '../firebase-applet-config.json';
 // Initialize Firebase SDK
 let app;
 try {
+  console.log("Initializing Firebase with config:", firebaseConfig.projectId);
   app = initializeApp(firebaseConfig);
 } catch (error) {
   console.error("Firebase initialization failed:", error);

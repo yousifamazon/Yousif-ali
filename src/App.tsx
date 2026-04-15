@@ -640,6 +640,8 @@ export default function App() {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showReceiptScanner, setShowReceiptScanner] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const [showCustomTabModal, setShowCustomTabModal] = useState(false);
+  const [newCustomTabName, setNewCustomTabName] = useState('');
   const [newProduct, setNewProduct] = useState<{ name: string, price: number, quantity: number }>({ name: '', price: 0, quantity: 1 });
   
   // AI & Voice State
@@ -997,7 +999,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         setData(prev => ({ 
           ...prev, 
           descriptions: settings.descriptions || prev.descriptions,
-          history: settings.history || prev.history
+          history: settings.history || prev.history,
+          customTabs: settings.customTabs || prev.customTabs || []
         }));
       }
     }, (err) => handleFirestoreError(err, OperationType.GET, `users/${user.uid}/settings/main`));
@@ -1064,6 +1067,37 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         history: newHistory
       };
     });
+  };
+
+  const handleAddCustomTab = () => {
+    if (!newCustomTabName.trim()) return;
+    setData(prev => {
+      const customTabs = prev.customTabs || [];
+      if (customTabs.includes(newCustomTabName.trim())) return prev;
+      const newCustomTabs = [...customTabs, newCustomTabName.trim()];
+      
+      if (user) {
+        setDoc(doc(db, `users/${user.uid}/settings/main`), { customTabs: newCustomTabs }, { merge: true })
+          .catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/settings/main`));
+      }
+      return { ...prev, customTabs: newCustomTabs };
+    });
+    setNewCustomTabName('');
+    setShowCustomTabModal(false);
+  };
+
+  const handleDeleteCustomTab = (tabName: string) => {
+    setData(prev => {
+      const customTabs = (prev.customTabs || []).filter(t => t !== tabName);
+      if (user) {
+        setDoc(doc(db, `users/${user.uid}/settings/main`), { customTabs }, { merge: true })
+          .catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/settings/main`));
+      }
+      return { ...prev, customTabs };
+    });
+    if (financeFilter === tabName) {
+      setFinanceFilter('all');
+    }
   };
 
   useEffect(() => {
@@ -1217,7 +1251,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       receiptItems: newTransaction.receiptItems,
       receiptImage: newTransaction.receiptImage,
       isDelivery: newTransaction.isDelivery,
-      savingsEffect: newTransaction.savingsEffect || 'none'
+      savingsEffect: newTransaction.savingsEffect || 'none',
+      discount: newTransaction.discount,
+      paidAmount: newTransaction.paidAmount,
+      remainingAmount: newTransaction.remainingAmount,
+      debtAmount: newTransaction.debtAmount
     };
 
     // Only add work-specific fields if it's a work transaction
@@ -2303,12 +2341,18 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       const matchesSearch = t.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            (t.shopName || '').toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
+      if (financeFilter === 'all') return true;
       if (financeFilter === 'driver') return t.description === 'سایەقی' || t.isDelivery;
       if (category === 'personal') {
         if (financeFilter === 'market') return t.description === 'مارکێت';
         if (financeFilter === 'fuel') return t.description === 'بەنزین';
         if (financeFilter === 'income') return t.type === 'income';
         if (financeFilter === 'savings') return t.type === 'savings';
+        
+        // Custom tabs
+        if ((data.customTabs || []).includes(financeFilter)) {
+          return t.description === financeFilter;
+        }
       }
       return true;
     });
@@ -2326,7 +2370,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </div>
 
         <div className="space-y-4">
-          <div className="flex gap-2 bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-color)] shadow-sm overflow-x-auto">
+          <div className="flex gap-2 bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-color)] shadow-sm overflow-x-auto items-center">
             {[
               { id: 'all', label: 'گشتی' },
               { id: 'driver', label: 'سایەقی' },
@@ -2335,19 +2379,37 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 { id: 'fuel', label: 'بەنزین' },
                 { id: 'income', label: 'داهات' },
                 { id: 'savings', label: 'پاشەکەوت' },
+                ...(data.customTabs || []).map(tab => ({ id: tab, label: tab, isCustom: true }))
               ] : [])
             ].map(f => (
-              <button
-                key={`${f.id}-finance-filter`}
-                onClick={() => setFinanceFilter(f.id as any)}
-                className={cn(
-                  "px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
-                  financeFilter === f.id ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
+              <div key={`${f.id}-finance-filter`} className="relative group flex-shrink-0">
+                <button
+                  onClick={() => setFinanceFilter(f.id as any)}
+                  className={cn(
+                    "px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
+                    financeFilter === f.id ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"
+                  )}
+                >
+                  {f.label}
+                </button>
+                {f.isCustom && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCustomTab(f.id); }}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 )}
-              >
-                {f.label}
-              </button>
+              </div>
             ))}
+            {category === 'personal' && (
+              <button 
+                onClick={() => setShowCustomTabModal(true)}
+                className="px-3 py-2 rounded-xl text-sm font-bold text-[var(--text-muted)] hover:bg-[var(--bg-main)] transition-all flex items-center gap-1 flex-shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
           </div>
           
           {category === 'personal' && (
@@ -3284,17 +3346,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                           <div key={item.id || index} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەت</label>
-                              <HistoryInput 
+                              <input 
                                 value={item.name || ''} 
-                                onChange={val => {
+                                onChange={e => {
                                   const next = [...(newTransaction.receiptItems || [])];
-                                  next[index].name = val;
+                                  next[index].name = e.target.value;
                                   setNewTransaction(p => ({ ...p, receiptItems: next }));
                                 }}
-                                historyKey="transaction_receipt_item"
-                                history={data.history?.['transaction_receipt_item']}
-                                onSaveHistory={handleSaveHistory}
-                                className="px-3 py-2 bg-[var(--bg-card)] text-xs text-[var(--text-main)]" 
+                                className="w-full px-4 py-3 bg-[var(--bg-card)] border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm text-[var(--text-main)] shadow-sm" 
                                 placeholder="ناوی بابەت" 
                               />
                             </div>
@@ -3664,6 +3723,34 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   <Button variant="danger" className="w-full py-4 rounded-2xl text-lg" onClick={resetAllData}>بەڵێ، هەمووی رەش بکەرەوە</Button>
                   <Button variant="ghost" className="w-full py-4 rounded-2xl text-lg" onClick={() => setShowResetModal(false)}>پاشگەزبوونەوە</Button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showCustomTabModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCustomTabModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <Plus className="w-6 h-6 text-blue-600" />
+                  زیادکردنی بەش
+                </h3>
+                <button onClick={() => setShowCustomTabModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ناوی بەش</label>
+                  <input 
+                    value={newCustomTabName} 
+                    onChange={e => setNewCustomTabName(e.target.value)} 
+                    className="w-full px-6 py-4 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                    placeholder="ناوی بەش بنووسە..." 
+                    autoFocus
+                  />
+                </div>
+                <Button className="w-full py-5 rounded-3xl text-lg" onClick={handleAddCustomTab}>زیادکردن</Button>
               </div>
             </motion.div>
           </div>
