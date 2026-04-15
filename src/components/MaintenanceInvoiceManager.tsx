@@ -254,7 +254,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
             <div class="payment-details">
                 <div class="payment-title">تفاصيل الدفع (وردەکاری پارەدان)</div>
                 <div><span>نەقد (کاش):</span> <strong class="gray-bg" style="padding:0 15px;">${invoice.cashPaid.toLocaleString()}</strong></div>
-                <div><span>لەسەر حیساب (قەرز):</span> <span>${invoice.debtAmount.toLocaleString()}</span></div>
+                <div ${invoice.debtAmount > 0 ? 'style="background-color: #ffebee !important; color: #c62828 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;"' : ''}><span>لەسەر حیساب (قەرز):</span> <span>${invoice.debtAmount.toLocaleString()}</span></div>
                 <div><span>باڵانسی ماوە:</span> <span>${invoice.remainingBalance.toLocaleString()}</span></div>
             </div>
         </div>
@@ -410,7 +410,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
             <div class="payment-details">
                 <div class="payment-title">تفاصيل الدفع (وردەکاری پارەدان)</div>
                 <div><span>نەقد (کاش):</span> <strong class="gray-bg" style="padding:0 15px;">${invoice.cashPaid.toLocaleString()}</strong></div>
-                <div><span>لەسەر حیساب (قەرز):</span> <span>${invoice.debtAmount.toLocaleString()}</span></div>
+                <div ${invoice.debtAmount > 0 ? 'style="background-color: #ffebee !important; color: #c62828 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;"' : ''}><span>لەسەر حیساب (قەرز):</span> <span>${invoice.debtAmount.toLocaleString()}</span></div>
                 <div><span>باڵانسی ماوە:</span> <span>${invoice.remainingBalance.toLocaleString()}</span></div>
             </div>
         </div>
@@ -661,9 +661,9 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                           <input type="number" className="inv-input transparent num" style={{fontWeight: 'bold'}} value={cashPaid || ''} onChange={e => setCashPaid(Number(e.target.value))} placeholder="0" />
                         </div>
                       </div>
-                      <div>
+                      <div style={debtAmount > 0 ? {backgroundColor: '#ffebee', color: '#c62828', fontWeight: 'bold'} : {}}>
                         <span>لەسەر حیساب (قەرز):</span> 
-                        <input type="number" className="inv-input transparent num" value={debtAmount || ''} onChange={e => setDebtAmount(Number(e.target.value))} placeholder="0" />
+                        <input type="number" className="inv-input transparent num" style={debtAmount > 0 ? {color: '#c62828', fontWeight: 'bold'} : {}} value={debtAmount || ''} onChange={e => setDebtAmount(Number(e.target.value))} placeholder="0" />
                       </div>
                       <div><span>باڵانسی ماوە:</span> <span>{remainingBalance.toLocaleString()}</span></div>
                   </div>
