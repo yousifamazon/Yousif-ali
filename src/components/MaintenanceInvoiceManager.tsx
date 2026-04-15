@@ -665,7 +665,21 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                         <span>لەسەر حیساب (قەرز):</span> 
                         <input type="number" className="inv-input transparent num" style={debtAmount > 0 ? {color: '#c62828', fontWeight: 'bold'} : {}} value={debtAmount || ''} onChange={e => setDebtAmount(Number(e.target.value))} placeholder="0" />
                       </div>
-                      <div><span>باڵانسی ماوە:</span> <span>{remainingBalance.toLocaleString()}</span></div>
+                      <div>
+                        <span>باڵانسی ماوە:</span> 
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                          <span>{remainingBalance.toLocaleString()}</span>
+                          {remainingBalance > 0 && (
+                            <button 
+                              onClick={() => setDebtAmount((debtAmount || 0) + remainingBalance)}
+                              title="خستنە سەر قەرز"
+                              className="bg-red-100 text-red-700 hover:bg-red-200 px-2 py-0.5 rounded text-xs font-bold transition-colors"
+                            >
+                              + قەرز
+                            </button>
+                          )}
+                        </div>
+                      </div>
                   </div>
               </div>
 
