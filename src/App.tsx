@@ -58,7 +58,7 @@ import { BarcodeScanner } from './components/BarcodeScanner';
 import { ReceiptScanner } from './components/ReceiptScanner';
 import { scanReceipt } from './services/geminiService';
 import { getFinancialInsights, AIInsight } from './services/aiAdvisorService';
-import { parseVoiceCommand, VoiceAction } from './services/voiceCommandService';
+import { parseVoiceCommand, parseVoiceCommandAudio, VoiceAction } from './services/voiceCommandService';
 import { resizeImage } from './lib/imageUtils';
 import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isPast } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -198,6 +198,7 @@ const VoiceCommandModal = ({
   isOpen, 
   onClose, 
   onCommand, 
+  onAudioCommand,
   isListening, 
   setIsListening, 
   message,
@@ -206,56 +207,67 @@ const VoiceCommandModal = ({
   isOpen: boolean; 
   onClose: () => void; 
   onCommand: (text: string) => void;
+  onAudioCommand?: (audioBase64: string, mimeType: string) => void;
   isListening: boolean;
   setIsListening: (val: boolean) => void;
   message: string | null;
   setVoiceMessage: (msg: string | null) => void;
 }) => {
-  const [transcript, setTranscript] = useState('');
-  const recognitionRef = React.useRef<any>(null);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'ku-IQ'; // Try Kurdish, fallback to others if needed
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
-      recognitionRef.current.onresult = (event: any) => {
-        const text = event.results[0][0].transcript;
-        setTranscript(text);
-        setIsListening(false);
-        onCommand(text);
-      };
+  const startListening = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        setIsListening(false);
-        if (event.error === 'not-allowed') {
-          setVoiceMessage("تکایە ڕێگە بدە بە بەکارهێنانی مایکڕۆفۆن لە ڕێکخستنەکانی وێبگەڕەکەتدا.");
-        } else if (event.error === 'no-speech') {
-          setVoiceMessage("هیچ دەنگێک نەبیسترا، تکایە دووبارە هەوڵ بدەرەوە.");
-        } else {
-          setVoiceMessage("هەڵەیەک ڕوویدا لە کاتی ناسینەوەی دەنگدا.");
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
       };
 
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          // Extract base64 part
+          const base64 = base64data.split(',')[1];
+          if (onAudioCommand) {
+            onAudioCommand(base64, mediaRecorder.mimeType);
+          }
+        };
+        stream.getTracks().forEach(track => track.stop());
       };
-    }
-  }, []);
 
-  const startListening = () => {
-    setTranscript('');
-    setIsListening(true);
-    recognitionRef.current?.start();
+      mediaRecorder.start();
+      setIsListening(true);
+      setVoiceMessage("گوێم لێیە، قسە بکە...");
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      setVoiceMessage("تکایە ڕێگە بدە بە بەکارهێنانی مایکڕۆفۆن لە ڕێکخستنەکانی وێبگەڕەکەتدا.");
+      setIsListening(false);
+    }
   };
 
   const stopListening = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
     setIsListening(false);
-    recognitionRef.current?.stop();
+    setVoiceMessage("خەریکی لێکدانەوەی دەنگەکەم...");
   };
 
   return (
@@ -300,9 +312,7 @@ const VoiceCommandModal = ({
               </div>
 
               <div className="w-full bg-[var(--bg-main)] p-6 rounded-3xl min-h-[100px] flex items-center justify-center border border-[var(--border-color)]">
-                {transcript ? (
-                  <p className="text-lg font-black text-blue-600 dark:text-blue-400">"{transcript}"</p>
-                ) : message ? (
+                {message ? (
                   <p className="text-lg font-bold text-[var(--text-main)]">{message}</p>
                 ) : (
                   <p className="text-[var(--text-muted)] italic">چاوەڕێی دەنگتم...</p>
@@ -592,6 +602,16 @@ export default function App() {
   const handleVoiceCommand = async (text: string) => {
     setVoiceMessage("خەریکی لێکدانەوەی فەرمانەکەم...");
     const result = await parseVoiceCommand(text);
+    processVoiceResult(result);
+  };
+
+  const handleVoiceCommandAudio = async (audioBase64: string, mimeType: string) => {
+    setVoiceMessage("خەریکی لێکدانەوەی دەنگەکەم...");
+    const result = await parseVoiceCommandAudio(audioBase64, mimeType);
+    processVoiceResult(result);
+  };
+
+  const processVoiceResult = (result: VoiceAction) => {
     setVoiceMessage(result.message);
 
     if (result.type === 'ADD_TRANSACTION') {
@@ -626,6 +646,24 @@ export default function App() {
         tasks: [newT, ...prev.tasks]
       }));
       syncTaskToFirebase(newT);
+    } else if (result.type === 'ADD_DEBT') {
+      const newD: Debt = {
+        id: crypto.randomUUID(),
+        personName: result.data.personName || '',
+        amount: result.data.amount || 0,
+        type: result.data.type || 'owed',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        notes: result.data.notes || '',
+        completed: false
+      };
+      setData(prev => ({
+        ...prev,
+        debts: [newD, ...(prev.debts || [])]
+      }));
+      if (user) {
+        setDoc(doc(db, `users/${user.uid}/debts/${newD.id}`), newD)
+          .catch(err => handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/debts/${newD.id}`));
+      }
     }
   };
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -3760,6 +3798,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           isOpen={showVoiceModal} 
           onClose={() => setShowVoiceModal(false)} 
           onCommand={handleVoiceCommand}
+          onAudioCommand={handleVoiceCommandAudio}
           isListening={isListening}
           setIsListening={setIsListening}
           message={voiceMessage}
