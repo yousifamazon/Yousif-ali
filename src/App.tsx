@@ -704,6 +704,7 @@ export default function App() {
           remainingAmount: result.remainingAmount || p.remainingAmount,
           debtAmount: result.debtAmount || p.debtAmount,
           receiptItems: result.items ? result.items.map(item => ({ 
+            id: crypto.randomUUID(),
             name: item.name, 
             price: item.price,
             quantity: item.quantity,
@@ -784,7 +785,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   const initialTaskState: Partial<Task> = { 
     title: '', 
     description: '', 
-    details: [{ subject: '', work: '' }],
+    details: [{ id: crypto.randomUUID(), subject: '', work: '' }],
     date: format(new Date(), 'yyyy-MM-dd'), 
     category: 'personal',
     priority: 'medium',
@@ -806,7 +807,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     workLocation: '',
     shopName: '',
     itemsBought: '',
-    receiptItems: [{ name: '', price: 0 }],
+    receiptItems: [{ id: crypto.randomUUID(), name: '', price: 0 }],
     driverName: '',
     customerName: '',
     invoiceNumber: '',
@@ -825,7 +826,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       // Add to receipt items
       setNewTransaction(p => ({
         ...p,
-        receiptItems: [...(p.receiptItems || []), { name: existingProduct.name, price: existingProduct.price, quantity: 1, unitPrice: existingProduct.price }]
+        receiptItems: [...(p.receiptItems || []), { id: crypto.randomUUID(), name: existingProduct.name, price: existingProduct.price, quantity: 1, unitPrice: existingProduct.price }]
       }));
     } else {
       // Prompt for new product
@@ -851,6 +852,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setNewTransaction(p => ({
       ...p,
       receiptItems: [...(p.receiptItems || []), { 
+        id: crypto.randomUUID(),
         name: newProduct.name, 
         price: newProduct.price * (newProduct.quantity || 1), 
         quantity: newProduct.quantity || 1, 
@@ -1331,7 +1333,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       body: taskRows,
       startY: 35,
       styles: { font: 'helvetica', fontSize: 8 },
-      headStyles: { fillStyle: 'f' }
+      headStyles: { fillColor: [41, 128, 185] } // Use a standard blue color for header background
     });
 
     // Transactions Section
@@ -2042,7 +2044,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <h4 className="font-bold text-[var(--text-main)]">{task.title}</h4>
                     <div className="mt-1 space-y-0.5">
                       {(task.details || []).map((d, i) => (
-                        <p key={`${i}-today-task-detail`} className="text-[10px] text-[var(--text-muted)]">
+                        <p key={d.id || i} className="text-[10px] text-[var(--text-muted)]">
                           <span className="font-black text-[var(--text-muted)]">{d.subject}:</span> {d.work}
                         </p>
                       ))}
@@ -2153,14 +2155,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       </button>
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
-                          {(task.workTypes || []).map((wt, i) => (
-                            <span key={`${i}-work-type-badge`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                          {(task.workTypes || []).map((wt) => (
+                            <span key={wt} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
                         <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
                         <div className="mt-2 space-y-1">
                           {(task.details || []).map((d, i) => (
-                            <div key={`${i}-task-detail-display`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                            <div key={d.id || i} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
                               <p className="text-xs font-black text-[var(--text-muted)]">{d.subject}</p>
                               <p className="text-xs text-[var(--text-muted)] mt-0.5">{d.work}</p>
                             </div>
@@ -2292,7 +2294,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {category === 'personal' && (data.descriptions || []).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {(data.descriptions || []).map((cat, idx) => (
-                <div key={`${idx}-description-item`} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
+                <div key={cat} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
                   {editingDescription?.index === idx ? (
                     <input 
                       autoFocus
@@ -2418,7 +2420,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.receiptItems && t.receiptItems.length > 0 && (
                           <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={`${i}-receipt-item-display`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
+                              <div key={item.id || i} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
                                 <span>{item.name}</span>
                                 <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
@@ -2737,8 +2739,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
                   {/* Selected Custom Types */}
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t, i) => (
-                      <div key={`${i}-custom-work-type`} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
+                    {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t) => (
+                      <div key={t} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
                         <span 
                           contentEditable 
                           suppressContentEditableWarning
@@ -2782,8 +2784,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </div>
                   
                   <div className="space-y-3">
-                    {(newTask.details || [{ subject: '', work: '' }]).map((detail, idx) => (
-                      <div key={`${idx}-new-task-detail`} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
+                    {(newTask.details || [{ id: crypto.randomUUID(), subject: '', work: '' }]).map((detail, idx) => (
+                      <div key={detail.id || idx} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
                         <div className="col-span-5 space-y-1">
                           <label className="text-[10px] font-bold text-[var(--text-muted)]">بابەت</label>
                           <HistoryInput 
@@ -2831,7 +2833,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </div>
 
                   <button 
-                    onClick={() => setNewTask(p => ({ ...p, details: [...(p.details || []), { subject: '', work: '' }] }))}
+                    onClick={() => setNewTask(p => ({ ...p, details: [...(p.details || []), { id: crypto.randomUUID(), subject: '', work: '' }] }))}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95 border-2 border-dashed border-blue-200 dark:border-blue-800"
                   >
                     <Plus className="w-5 h-5" /> زیادکردنی بابەت
@@ -2906,9 +2908,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   />
                   {newTransaction.category === 'personal' && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {(data.descriptions || []).slice(0, 12).map((d, i) => (
+                      {(data.descriptions || []).slice(0, 12).map((d) => (
                         <button 
-                          key={`${i}-description-history`}
+                          key={d}
                           onClick={() => setNewTransaction(p => ({ ...p, description: d }))}
                           className="text-[10px] font-bold bg-[var(--bg-main)] hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-lg transition-colors text-[var(--text-main)]"
                         >
@@ -3064,7 +3066,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                               {newTransaction.receiptItems.map((item, idx) => (
-                                <tr key={`${idx}-receipt-item-preview`}>
+                                <tr key={item.id || idx}>
                                   <td className="px-3 py-2 font-bold">{item.name}</td>
                                   <td className="px-3 py-2 text-center">{item.quantity || '-'}</td>
                                   <td className="px-3 py-2 text-center">{(item.unitPrice || item.price).toLocaleString()}</td>
@@ -3200,7 +3202,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <label className="text-sm font-black text-[var(--text-muted)] mr-1">وەسڵ (بابەت و نرخ)</label>
                       <div className="space-y-3">
                         {(newTransaction.receiptItems || []).map((item, index) => (
-                          <div key={`${index}-receipt-item-input`} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
+                          <div key={item.id || index} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەت</label>
                               <HistoryInput 
@@ -3261,7 +3263,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         ))}
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => setNewTransaction(p => ({ ...p, receiptItems: [...(p.receiptItems || []), { name: '', price: 0 }] }))}
+                            onClick={() => setNewTransaction(p => ({ ...p, receiptItems: [...(p.receiptItems || []), { id: crypto.randomUUID(), name: '', price: 0 }] }))}
                             className="flex-1 py-3 border-2 border-dashed border-[var(--border-color)] rounded-2xl text-[var(--text-muted)] font-bold text-sm hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
                           >
                             <Plus className="w-4 h-4" /> زیادکردنی بابەت
@@ -3465,8 +3467,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 paidAmount: result.paidAmount || prev.paidAmount,
                 remainingAmount: result.remainingAmount || prev.remainingAmount,
                 debtAmount: result.debtAmount || prev.debtAmount,
-                receiptItems: (result.items || []).map((item: any, i: number) => ({
+                receiptItems: (result.items || []).map((item: any) => ({
                   ...item,
+                  id: crypto.randomUUID(),
                   quantity: item.quantity || 1,
                   unitPrice: item.unitPrice || item.price,
                   price: item.price || (item.unitPrice * (item.quantity || 1))

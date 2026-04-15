@@ -1,4 +1,5 @@
 export type TaskDetail = {
+  id: string;
   subject: string;
   work: string;
 };
@@ -14,6 +15,14 @@ export type Task = {
   priority: 'low' | 'medium' | 'high';
   workTypes?: string[]; // e.g., ['سایەقی', 'کارەبا']
   dueDate?: string;
+};
+
+export type ReceiptItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity?: number;
+  unitPrice?: number;
 };
 
 export type Transaction = {
@@ -35,7 +44,7 @@ export type Transaction = {
   shopName?: string;
   itemsBought?: string;
   maintenanceType?: 'سیانەی ناو کارگە' | 'ئیشی کارەبا';
-  receiptItems?: { name: string; price: number; quantity?: number; unitPrice?: number }[];
+  receiptItems?: ReceiptItem[];
   // Delivery/Driver specific
   driverName?: string;
   customerName?: string;
