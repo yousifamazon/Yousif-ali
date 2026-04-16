@@ -240,6 +240,11 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      match /budgets/{budgetId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
       match /settings/{settingId} {
         allow read: if isOwner(userId);
         allow write: if isOwner(userId);

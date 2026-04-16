@@ -2586,7 +2586,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 { id: 'fuel', label: 'بەنزین' },
                 { id: 'income', label: 'داهات' },
                 { id: 'savings', label: 'پاشەکەوت' },
-                ...(data.customTabs || []).map(tab => ({ id: tab, label: tab, isCustom: true }))
+                ...(data.customTabs || [])
+                  .filter(tab => !['all', 'driver', 'market', 'fuel', 'income', 'savings'].includes(tab))
+                  .map(tab => ({ id: tab, label: tab, isCustom: true }))
               ] : [])
             ].map(f => (
               <div key={`${f.id}-finance-filter`} className="relative group flex-shrink-0">
