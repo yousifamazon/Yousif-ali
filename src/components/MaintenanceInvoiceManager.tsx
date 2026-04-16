@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MaintenanceInvoice, MaintenanceItem } from '../types';
-import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, XCircle, Mic, Search } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, XCircle, Mic, Search, MessageCircle } from 'lucide-react';
 import { Button } from './Button';
 import { SpeechToTextButton } from '../App';
 import { format } from 'date-fns';
@@ -13,12 +13,15 @@ interface Props {
   onSave: (invoice: MaintenanceInvoice) => void;
   onDelete: (id: string) => void;
   searchQuery?: string;
+  exchangeRate?: number;
 }
 
-export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, onDelete, searchQuery = '' }) => {
+export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, onDelete, searchQuery = '', exchangeRate: globalExchangeRate = 1500 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<MaintenanceInvoice | null>(null);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [currency, setCurrency] = useState<'IQD' | 'USD'>('IQD');
+  const [localExchangeRate, setLocalExchangeRate] = useState(globalExchangeRate);
 
   const effectiveSearchQuery = searchQuery || localSearchQuery;
 
@@ -98,6 +101,8 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
       receivedFromFactory,
       factoryOwesMe,
       iOweFactory,
+      currency,
+      exchangeRate: localExchangeRate,
       createdAt: editingInvoice?.createdAt || new Date().toISOString(),
       userId: editingInvoice?.userId
     };
@@ -140,6 +145,8 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
     setWarranty(invoice.warranty);
     setNotes(invoice.notes);
     setReceivedFromFactory(invoice.receivedFromFactory);
+    setCurrency(invoice.currency || 'IQD');
+    setLocalExchangeRate(invoice.exchangeRate || globalExchangeRate);
     setIsCreating(true);
   };
 
@@ -737,6 +744,18 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                         ڕێکەوت: 
                         <input type="date" className="inv-input inline transparent" value={date} onChange={e => setDate(e.target.value)} />
                       </div>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px'}}>
+                        دراو:
+                        <select 
+                          value={currency} 
+                          onChange={(e) => setCurrency(e.target.value as any)}
+                          className="inv-input transparent"
+                          style={{fontSize: '12px', padding: '2px'}}
+                        >
+                          <option value="IQD">دینار (IQD)</option>
+                          <option value="USD">دۆلار (USD)</option>
+                        </select>
+                      </div>
                       <div style={{marginTop: '5px'}}>کۆپی: بنەڕەت (ئەسڵی)</div>
                   </div>
                   <div className="info-box" style={{border: 'none', padding: 0}}>
@@ -918,6 +937,27 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
     );
   }
 
+  const shareToWhatsApp = (invoice: MaintenanceInvoice) => {
+    const text = `
+*وەسڵی سیانە - ${invoice.title || 'خەرجی کارگە'}*
+--------------------------
+*ژمارەی وەسڵ:* ${invoice.invoiceNumber}
+*بەروار:* ${invoice.date}
+*بۆ بەڕێز:* ${invoice.customerName}
+*مۆبایل:* ${invoice.mobile}
+
+*کۆی گشتی:* ${invoice.totalAfterDiscount.toLocaleString()} ${invoice.currency || 'د.ع'}
+*ماوە:* ${invoice.remainingBalance.toLocaleString()} ${invoice.currency || 'د.ع'}
+
+*تێبینی:* ${invoice.notes || 'نییە'}
+--------------------------
+سوپاس بۆ متمانەتان
+    `.trim();
+    
+    const url = `https://wa.me/${invoice.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1048,6 +1088,9 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                   <XCircle className="w-4 h-4" /> وەرنەگیرا
                 </Button>
               )}
+              <Button variant="secondary" size="sm" onClick={() => shareToWhatsApp(invoice)} className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 border-green-200">
+                <MessageCircle className="w-4 h-4" /> واتسئاپ
+              </Button>
               <button onClick={() => onDelete(invoice.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl">
                 <Trash2 className="w-5 h-5" />
               </button>

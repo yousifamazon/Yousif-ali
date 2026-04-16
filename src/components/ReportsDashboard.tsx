@@ -31,8 +31,16 @@ export const ReportsDashboard: React.FC<Props> = ({ data }) => {
 
       // Maintenance Invoices
       const invoices = data.maintenanceInvoices.filter(inv => isSameMonth(new Date(inv.date), month));
-      const maintenanceRevenue = invoices.reduce((sum, inv) => sum + inv.totalAfterDiscount, 0);
-      const maintenancePaid = invoices.reduce((sum, inv) => sum + inv.cashPaid, 0);
+      const maintenanceRevenue = invoices.reduce((sum, inv) => {
+        const amount = inv.totalAfterDiscount;
+        const rate = inv.exchangeRate || data.exchangeRate || 1500;
+        return sum + (inv.currency === 'USD' ? amount * rate : amount);
+      }, 0);
+      const maintenancePaid = invoices.reduce((sum, inv) => {
+        const amount = inv.cashPaid;
+        const rate = inv.exchangeRate || data.exchangeRate || 1500;
+        return sum + (inv.currency === 'USD' ? amount * rate : amount);
+      }, 0);
 
       return {
         name: monthStr,

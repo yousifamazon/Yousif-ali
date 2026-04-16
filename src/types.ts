@@ -1,3 +1,5 @@
+export type Currency = 'IQD' | 'USD';
+
 export type TaskDetail = {
   id: string;
   subject: string;
@@ -45,6 +47,8 @@ export type Transaction = {
   itemsBought?: string;
   maintenanceType?: 'سیانەی ناو کارگە' | 'ئیشی کارەبا';
   receiptItems?: ReceiptItem[];
+  currency?: Currency;
+  exchangeRate?: number;
   // Delivery/Driver specific
   driverName?: string;
   customerName?: string;
@@ -127,8 +131,22 @@ export type MaintenanceInvoice = {
   receivedFromFactory: number;
   factoryOwesMe: number;
   iOweFactory: number;
+  currency?: Currency;
+  exchangeRate?: number;
   createdAt: string;
   userId?: string;
+};
+
+export type InventoryItem = {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  minQuantity: number;
+  unit: string;
+  purchasePrice: number;
+  salePrice: number;
+  lastUpdated: string;
 };
 
 export type AppData = {
@@ -139,6 +157,8 @@ export type AppData = {
   savingsGoals?: SavingsGoal[];
   products?: Product[];
   maintenanceInvoices?: MaintenanceInvoice[];
+  inventory?: InventoryItem[];
+  exchangeRate?: number; // USD to IQD
   descriptions: string[];
   history?: Record<string, string[]>;
   customTabs?: string[];

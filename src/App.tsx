@@ -52,7 +52,12 @@ import {
   BrainCircuit,
   Lightbulb,
   Zap as ZapIcon,
-  FileText
+  FileText,
+  Package,
+  MessageSquare,
+  Settings,
+  Globe,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarcodeScanner } from './components/BarcodeScanner';
@@ -81,6 +86,8 @@ import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, M
 import { MaintenanceInvoiceManager } from './components/MaintenanceInvoiceManager';
 import { CustomerManager } from './components/CustomerManager';
 import { ReportsDashboard } from './components/ReportsDashboard';
+import { InventoryManager } from './components/InventoryManager';
+import { SmartAssistant } from './components/SmartAssistant';
 import { 
   getStoredData, 
   saveToStorage, 
@@ -655,10 +662,11 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports' | 'inventory' | 'ai_chat' | 'settings'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [searchQuery, setSearchQuery] = useState('');
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
+  const [exchangeRate, setExchangeRate] = useState(1500); // Default 1 USD = 1500 IQD
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode.toString());
@@ -1099,7 +1107,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         // Migrate settings if cloud is empty
         if (!settingsSnap.exists() && (data.descriptions.length > 0 || Object.keys(data.history || {}).length > 0)) {
           console.log("Migrating local settings to Firebase...");
-          await syncSettingsToFirebase(data.descriptions, data.history || {});
+          await syncSettingsToFirebase({ descriptions: data.descriptions, history: data.history || {} });
         }
       }
     });
@@ -1198,7 +1206,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       };
       
       if (user) {
-        syncSettingsToFirebase(prev.descriptions, newHistory);
+        syncSettingsToFirebase({ descriptions: prev.descriptions, history: newHistory });
       }
 
       return {
@@ -1958,6 +1966,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         <MaintenanceInvoiceManager 
           invoices={data.maintenanceInvoices || []}
           searchQuery={invoiceSearchQuery}
+          exchangeRate={exchangeRate}
           onSave={async (invoice) => {
             const invoiceWithUser = { ...invoice, userId: user?.uid };
             setData(prev => {
@@ -2721,11 +2730,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'tasks', label: 'ئەرکەکان', icon: CheckSquare },
                     { id: 'personal', label: 'دارایی', icon: Wallet },
                     { id: 'maintenance', label: 'وەسڵی سیانە', icon: FileText },
+                    { id: 'inventory', label: 'مەخزەن', icon: Package },
                     { id: 'customers', label: 'کڕیاران', icon: User },
                     { id: 'reports', label: 'ڕاپۆرتەکان', icon: TrendingUp },
+                    { id: 'ai_chat', label: 'یاریدەدەری زیرەک', icon: BrainCircuit },
                     { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
                     { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
                     { id: 'savings', label: 'پاشەکەوت', icon: Vault },
+                    { id: 'settings', label: 'ڕێکخستن', icon: Settings },
                   ].map(tab => (
                     <button
                       key={`${tab.id}-sidebar-tab`}
@@ -2764,6 +2776,34 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'tasks' && renderTasks()}
               {activeTab === 'personal' && renderFinance('personal')}
               {activeTab === 'maintenance' && renderMaintenanceInvoices()}
+              {activeTab === 'inventory' && (
+                <InventoryManager 
+                  items={data.inventory || []} 
+                  onSave={(item) => {
+                    setData(prev => {
+                      const exists = prev.inventory?.find(i => i.id === item.id);
+                      const newInv = exists 
+                        ? prev.inventory?.map(i => i.id === item.id ? item : i)
+                        : [item, ...(prev.inventory || [])];
+                      const newData = { ...prev, inventory: newInv };
+                      saveToStorage(newData);
+                      if (user) {
+                        setDoc(doc(db, `users/${user.uid}/inventory/${item.id}`), item)
+                          .catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/inventory/${item.id}`));
+                      }
+                      return newData;
+                    });
+                  }}
+                  onDelete={(id) => {
+                    setData(prev => {
+                      const newInv = prev.inventory?.filter(i => i.id !== id);
+                      const newData = { ...prev, inventory: newInv };
+                      saveToStorage(newData);
+                      return newData;
+                    });
+                  }}
+                />
+              )}
               {activeTab === 'customers' && (
                 <CustomerManager 
                   invoices={data.maintenanceInvoices}
@@ -2776,9 +2816,54 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'reports' && (
                 <ReportsDashboard data={data} />
               )}
+              {activeTab === 'ai_chat' && (
+                <SmartAssistant data={data} />
+              )}
               {activeTab === 'wishlist' && renderWishlist()}
               {activeTab === 'debts' && renderDebts()}
               {activeTab === 'savings' && renderSavings()}
+              {activeTab === 'settings' && (
+                <div className="max-w-2xl mx-auto space-y-8">
+                  <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border-main)] shadow-xl">
+                    <h2 className="text-2xl font-black text-[var(--text-main)] mb-6 flex items-center gap-3">
+                      <Globe className="w-8 h-8 text-blue-600" />
+                      ڕێکخستنی دراو
+                    </h2>
+                    <div className="space-y-4">
+                      <label className="text-sm font-black text-[var(--text-muted)] block">نرخی گۆڕینەوە (١ دۆلار بەرامبەر دینار)</label>
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="number" 
+                          value={exchangeRate}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setExchangeRate(val);
+                            setData(prev => ({ ...prev, exchangeRate: val }));
+                            syncSettingsToFirebase({ exchangeRate: val });
+                          }}
+                          className="flex-1 px-6 py-4 bg-[var(--bg-main)] border border-[var(--border-main)] rounded-2xl text-[var(--text-main)] font-black text-xl outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-xl font-black text-[var(--text-main)]">د.ع</span>
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)] font-bold">ئەم نرخە بەکاردێت بۆ حیسابکردنی وەسڵەکان و ڕاپۆرتە داراییەکان.</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border-main)] shadow-xl">
+                    <h2 className="text-2xl font-black text-[var(--text-main)] mb-6 flex items-center gap-3">
+                      <Sun className="w-8 h-8 text-orange-500" />
+                      ڕووکار
+                    </h2>
+                    <button 
+                      onClick={() => setDarkMode(!darkMode)}
+                      className="w-full flex items-center justify-between p-6 bg-[var(--bg-main)] rounded-2xl border border-[var(--border-main)] hover:bg-[var(--bg-main)]/80 transition-all"
+                    >
+                      <span className="font-black text-[var(--text-main)]">دۆخی تاریک (Dark Mode)</span>
+                      {darkMode ? <Moon className="w-6 h-6 text-blue-400" /> : <Sun className="w-6 h-6 text-orange-500" />}
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </main>

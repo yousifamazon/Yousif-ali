@@ -179,11 +179,14 @@ export const deleteTransactionFromFirebase = async (transactionId: string) => {
   }
 };
 
-export const syncSettingsToFirebase = async (descriptions: string[], history: any) => {
+export const syncSettingsToFirebase = async (settings: { descriptions?: string[], history?: any, exchangeRate?: number }) => {
   if (!auth.currentUser) return;
   const path = `users/${auth.currentUser.uid}/settings/main`;
   try {
-    await setDoc(doc(db, path), { descriptions, history });
+    const docRef = doc(db, path);
+    const existingDoc = await getDoc(docRef);
+    const existingData = existingDoc.exists() ? existingDoc.data() : {};
+    await setDoc(docRef, { ...existingData, ...settings });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -283,6 +286,21 @@ export const syncProductToFirebase = async (product: any) => {
       createdAt: createdAt
     });
 
+    await setDoc(docRef, dataToSync);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const syncInventoryItemToFirebase = async (item: any) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/inventory/${item.id}`;
+  try {
+    const docRef = doc(db, path);
+    const dataToSync = removeUndefined({
+      ...item,
+      userId: auth.currentUser.uid
+    });
     await setDoc(docRef, dataToSync);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
