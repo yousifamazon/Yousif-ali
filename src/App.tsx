@@ -79,6 +79,8 @@ import {
 } from 'recharts';
 import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, MaintenanceInvoice } from './types';
 import { MaintenanceInvoiceManager } from './components/MaintenanceInvoiceManager';
+import { CustomerManager } from './components/CustomerManager';
+import { ReportsDashboard } from './components/ReportsDashboard';
 import { 
   getStoredData, 
   saveToStorage, 
@@ -653,9 +655,10 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'wishlist' | 'debts' | 'savings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [searchQuery, setSearchQuery] = useState('');
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode.toString());
@@ -750,6 +753,10 @@ export default function App() {
         setDoc(doc(db, `users/${user.uid}/debts/${newD.id}`), newD)
           .catch(err => handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/debts/${newD.id}`));
       }
+    } else if (result.type === 'UNKNOWN' && result.data && (result.data as any).query) {
+      // Handle searchInvoices which returns UNKNOWN type but has query in data
+      setActiveTab('maintenance');
+      setInvoiceSearchQuery((result.data as any).query || (result.data as any).date || '');
     }
   };
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -1950,6 +1957,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       <div className="space-y-6 pb-24">
         <MaintenanceInvoiceManager 
           invoices={data.maintenanceInvoices || []}
+          searchQuery={invoiceSearchQuery}
           onSave={async (invoice) => {
             const invoiceWithUser = { ...invoice, userId: user?.uid };
             setData(prev => {
@@ -2713,6 +2721,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'tasks', label: 'ئەرکەکان', icon: CheckSquare },
                     { id: 'personal', label: 'دارایی', icon: Wallet },
                     { id: 'maintenance', label: 'وەسڵی سیانە', icon: FileText },
+                    { id: 'customers', label: 'کڕیاران', icon: User },
+                    { id: 'reports', label: 'ڕاپۆرتەکان', icon: TrendingUp },
                     { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
                     { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
                     { id: 'savings', label: 'پاشەکەوت', icon: Vault },
@@ -2754,6 +2764,18 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'tasks' && renderTasks()}
               {activeTab === 'personal' && renderFinance('personal')}
               {activeTab === 'maintenance' && renderMaintenanceInvoices()}
+              {activeTab === 'customers' && (
+                <CustomerManager 
+                  invoices={data.maintenanceInvoices}
+                  onViewInvoice={(inv) => {
+                    setActiveTab('maintenance');
+                    setInvoiceSearchQuery(inv.customerName || '');
+                  }}
+                />
+              )}
+              {activeTab === 'reports' && (
+                <ReportsDashboard data={data} />
+              )}
               {activeTab === 'wishlist' && renderWishlist()}
               {activeTab === 'debts' && renderDebts()}
               {activeTab === 'savings' && renderSavings()}

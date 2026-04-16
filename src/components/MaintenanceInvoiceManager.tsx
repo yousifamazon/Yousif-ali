@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MaintenanceInvoice, MaintenanceItem } from '../types';
-import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, XCircle, Mic } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, XCircle, Mic, Search } from 'lucide-react';
 import { Button } from './Button';
 import { SpeechToTextButton } from '../App';
 import { format } from 'date-fns';
@@ -12,11 +12,26 @@ interface Props {
   invoices: MaintenanceInvoice[];
   onSave: (invoice: MaintenanceInvoice) => void;
   onDelete: (id: string) => void;
+  searchQuery?: string;
 }
 
-export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, onDelete }) => {
+export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, onDelete, searchQuery = '' }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<MaintenanceInvoice | null>(null);
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+
+  const effectiveSearchQuery = searchQuery || localSearchQuery;
+
+  const filteredInvoices = useMemo(() => {
+    if (!effectiveSearchQuery) return invoices;
+    const q = effectiveSearchQuery.toLowerCase();
+    return invoices.filter(inv => 
+      inv.customerName?.toLowerCase().includes(q) || 
+      inv.invoiceNumber?.toLowerCase().includes(q) ||
+      inv.date.includes(q) ||
+      inv.mobile?.includes(q)
+    );
+  }, [invoices, effectiveSearchQuery]);
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [title, setTitle] = useState('خەرجی کارگە');
@@ -933,8 +948,19 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         </div>
       </div>
 
+      <div className="relative">
+        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" />
+        <input 
+          type="text" 
+          placeholder="گەڕان بۆ وەسڵ (ناو، ژمارە، بەروار)..." 
+          value={effectiveSearchQuery}
+          onChange={e => setLocalSearchQuery(e.target.value)}
+          className="w-full pr-12 pl-4 py-3 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {invoices.map(invoice => (
+        {filteredInvoices.map(invoice => (
           <motion.div 
             key={invoice.id}
             initial={{ opacity: 0, y: 20 }}

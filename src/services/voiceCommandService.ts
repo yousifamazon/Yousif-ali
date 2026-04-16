@@ -61,7 +61,34 @@ const addDebtTool: FunctionDeclaration = {
   }
 };
 
-const systemInstructionText = "تۆ یاریدەدەرێکی زیرەکی کوردیت بۆ بەڕێوەبردنی کار و خەرجییەکان. زۆر بە باشی لە هەموو شێوەزارەکانی زمانی کوردی تێدەگەیت (سۆرانی، بادینی، هەورامی، کەڵهوڕی، هتد). بەکارهێنەر بە کوردییەکی ئاسایی یان بە قسەی ڕۆژانە (عامي) فەرمانت پێدەکات، بۆ نموونە لەوانەیە بڵێت 'پێنج هەزارم دا بە بەنزین' یان 'ئیشێکی کارەبام هەیە بۆ بەیانی'. دەبێت زۆر بە وردی تێبگەیت مەبەستی چییە. ئەگەر باسی خەرجکردنی پارە، کڕینی شت، یان وەرگرتنی پارەی کرد، فەرمانی addTransaction بەکاربهێنە. ئەگەر باسی کارێک، ئەرکێک، یان ئیشێکی کرد کە دەبێت بکرێت، فەرمانی addTask بەکاربهێنە. ئەگەر باسی قەرز یان قەرزدان و قەرزوەرگرتنی کرد، فەرمانی addDebt بەکاربهێنە. ئەگەر تێنەگەیشتیت، بە کوردییەکی پاراو و شیرین لێی بپرسەوە کە مەبەستی چییە. وەڵامەکانت با زۆر کورت و پوخت بن، تەنها بڵێ کە کارەکەت جێبەجێ کردووە بە زمانێکی شیرینی کوردی، بۆ نموونە 'سەرچاو، خەرجییەکەم بۆت نووسی'.";
+const searchInvoicesTool: FunctionDeclaration = {
+  name: "searchInvoices",
+  description: "Search for invoices by customer name or date",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: { type: Type.STRING, description: "Customer name or keyword to search for" },
+      date: { type: Type.STRING, description: "Specific date to filter by (YYYY-MM-DD)" }
+    }
+  }
+};
+
+const systemInstructionText = `تۆ یاریدەدەرێکی زیرەکی کوردیت بۆ بەڕێوەبردنی کار و خەرجییەکان. زۆر بە باشی لە هەموو شێوەزارەکانی زمانی کوردی تێدەگەیت (سۆرانی، بادینی، هەورامی، کەڵهوڕی، هتد).
+
+ڕێساکان:
+1. ئەگەر باسی خەرجکردنی پارە، کڕینی شت، یان وەرگرتنی پارەی کرد، فەرمانی addTransaction بەکاربهێنە.
+   نموونە: "١٠ هەزارم دا بە غەسل"، "٥٠ هەزارم وەرگرت بۆ ئیشی کارەبا".
+2. ئەگەر باسی کارێک، ئەرکێک، یان ئیشێکی کرد کە دەبێت بکرێت، فەرمانی addTask بەکاربهێنە.
+   نموونە: "ئیشێکی سڕینەوەی فلتەرم هەیە بۆ بەیانی"، "سبەی دەبێت بچم بۆ لای کاک ئەحمەد بۆ چاککردنی سپلیت".
+3. ئەگەر باسی قەرز یان قەرزدان و قەرزوەرگرتنی کرد، فەرمانی addDebt بەکاربهێنە.
+   نموونە: "کاک محەمەد ١٠٠ هەزاری لای منە"، "٢٥ هەزارم قەرز دا بە عەلی".
+4. ئەگەر داوای گەڕان یان بینینی وەسڵەکانی کرد، فەرمانی searchInvoices بەکاربهێنە.
+   نموونە: "وەسڵەکانی کاک نەبەزم نیشان بدە"، "دوێنێ چ وەسڵێکم هەبوو؟".
+
+تێبینی گرنگ:
+- زۆر ورد بە لە دەرهێنانی ژمارەکان. "دە هەزار" بکە بە 10000.
+- ئەگەر تێنەگەیشتیت، بە کوردییەکی پاراو و شیرین لێی بپرسەوە.
+- وەڵامەکانت با زۆر کورت و پوخت بن.`;
 
 export async function parseVoiceCommandAudio(audioBase64: string, mimeType: string): Promise<VoiceAction> {
   if (!process.env.GEMINI_API_KEY) {
@@ -89,7 +116,7 @@ export async function parseVoiceCommandAudio(audioBase64: string, mimeType: stri
       ],
       config: {
         systemInstruction: systemInstructionText,
-        tools: [{ functionDeclarations: [addTransactionTool, addTaskTool, addDebtTool] }]
+        tools: [{ functionDeclarations: [addTransactionTool, addTaskTool, addDebtTool, searchInvoicesTool] }]
       }
     });
 
@@ -115,6 +142,13 @@ export async function parseVoiceCommandAudio(audioBase64: string, mimeType: stri
           type: 'ADD_DEBT',
           data: call.args,
           message: response.text || `باشە، قەرزی ${call.args.personName}م تۆمار کرد بە بڕی ${call.args.amount}.`
+        };
+      }
+      if (call.name === 'searchInvoices') {
+        return {
+          type: 'UNKNOWN', // We'll handle search in the UI later or map it to a new action
+          data: call.args,
+          message: response.text || `دەگەڕێم بۆ وەسڵەکانی ${call.args.query || call.args.date}...`
         };
       }
     }
@@ -143,7 +177,7 @@ export async function parseVoiceCommand(text: string): Promise<VoiceAction> {
       contents: prompt,
       config: {
         systemInstruction: systemInstructionText,
-        tools: [{ functionDeclarations: [addTransactionTool, addTaskTool, addDebtTool] }]
+        tools: [{ functionDeclarations: [addTransactionTool, addTaskTool, addDebtTool, searchInvoicesTool] }]
       }
     });
 
@@ -169,6 +203,13 @@ export async function parseVoiceCommand(text: string): Promise<VoiceAction> {
           type: 'ADD_DEBT',
           data: call.args,
           message: response.text || `باشە، قەرزی ${call.args.personName}م تۆمار کرد بە بڕی ${call.args.amount}.`
+        };
+      }
+      if (call.name === 'searchInvoices') {
+        return {
+          type: 'UNKNOWN',
+          data: call.args,
+          message: response.text || `دەگەڕێم بۆ وەسڵەکانی ${call.args.query || call.args.date}...`
         };
       }
     }
