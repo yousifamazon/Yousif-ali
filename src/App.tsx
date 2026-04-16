@@ -19,6 +19,9 @@ import {
   Wallet,
   Calendar,
   Clock,
+  Activity,
+  BrainCircuit,
+  Globe,
   ChevronRight,
   ChevronDown,
   AlertCircle,
@@ -49,14 +52,12 @@ import {
   ArrowDownToLine,
   Mic,
   MicOff,
-  BrainCircuit,
   Lightbulb,
   Zap as ZapIcon,
   FileText,
   Package,
   MessageSquare,
   Settings,
-  Globe,
   MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -112,6 +113,7 @@ import {
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { FinancialDashboard } from './components/FinancialDashboard';
+import { FinancialManager } from './components/FinancialManager';
 import { 
   auth, 
   loginWithGoogle, 
@@ -662,15 +664,25 @@ const FormattedNumberInput = ({
 export default function App() {
   const [data, setData] = useState<AppData>(getStoredData());
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [currency, setCurrency] = useState<'IQD' | 'USD'>('IQD');
+  const [exchangeRate, setExchangeRate] = useState(1500);
   const [newBudget, setNewBudget] = useState({ category: '', amount: 0, period: 'monthly' as const });
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports' | 'inventory' | 'ai_chat' | 'settings'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+
+  const healthScore = useMemo(() => {
+    const todaySpent = (data.transactions || [])
+      .filter(t => t.type === 'expense' && isToday(parseISO(t.date)))
+      .reduce((sum, t) => sum + t.amount, 0);
+    const limit = data.dailyLimit || 50000;
+    const budgetScore = limit > 0 ? Math.max(0, 100 - (todaySpent / limit) * 100) : 100;
+    return Math.round(budgetScore);
+  }, [data.transactions, data.dailyLimit]);
   const [searchQuery, setSearchQuery] = useState('');
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
-  const [exchangeRate, setExchangeRate] = useState(1500); // Default 1 USD = 1500 IQD
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode.toString());
@@ -2120,6 +2132,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     );
   };
 
+  const formatCurrency = (amount: number) => {
+    if (currency === 'USD') {
+      return `$${(amount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `${amount.toLocaleString()} د.ع`;
+  };
+
   const renderDashboard = () => {
     const todaySpent = (data.transactions || [])
       .filter(t => t.type === 'expense' && isToday(parseISO(t.date)))
@@ -2138,7 +2157,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-right">
                 <p className="text-slate-400 text-sm font-bold mb-1">خەرجی ڕێگەپێدراوی ئەمڕۆ</p>
-                <h3 className="text-4xl font-black">{dailyLimit.toLocaleString()} <span className="text-lg font-normal">د.ع</span></h3>
+                <h3 className="text-4xl font-black">{formatCurrency(dailyLimit)}</h3>
               </div>
               <div className="flex flex-col items-center">
                 <div className="relative w-24 h-24">
@@ -2154,7 +2173,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               <div className="text-center md:text-left">
                 <p className="text-slate-400 text-sm font-bold mb-1">ماوە بۆ ئەمڕۆ</p>
                 <h3 className={cn("text-3xl font-black", remainingToday < 0 ? "text-red-400" : "text-green-400")}>
-                  {Math.abs(remainingToday).toLocaleString()} <span className="text-lg font-normal">د.ع</span>
+                  {formatCurrency(Math.abs(remainingToday))}
                   {remainingToday < 0 && <span className="text-xs block mt-1">زیادەڕۆیی کراوە!</span>}
                 </h3>
               </div>
@@ -2162,10 +2181,41 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </Card>
         )}
 
+        <FinancialManager 
+          data={data} 
+          currency={currency}
+          exchangeRate={exchangeRate}
+        />
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'خەرجی نوێ', icon: Plus, color: 'bg-blue-600', onClick: () => { setNewTransaction(p => ({ ...p, type: 'expense' })); setShowTransactionModal(true); } },
+            { label: 'داهاتی نوێ', icon: TrendingUp, color: 'bg-emerald-600', onClick: () => { setNewTransaction(p => ({ ...p, type: 'income' })); setShowTransactionModal(true); } },
+            { label: 'قەرزی نوێ', icon: CreditCard, color: 'bg-amber-600', onClick: () => setShowDebtModal(true) },
+            { label: 'ئاواتی نوێ', icon: Sparkles, color: 'bg-purple-600', onClick: () => setShowWishlistModal(true) },
+          ].map((action, i) => (
+            <motion.button
+              key={i}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={action.onClick}
+              className={cn("p-4 rounded-3xl flex flex-col items-center gap-3 text-white shadow-lg transition-all", action.color)}
+            >
+              <div className="p-2 bg-white/20 rounded-xl">
+                <action.icon className="w-6 h-6" />
+              </div>
+              <span className="font-black text-sm">{action.label}</span>
+            </motion.button>
+          ))}
+        </div>
+
         <FinancialDashboard 
           invoices={data.maintenanceInvoices || []} 
           transactions={data.transactions || []} 
           debts={data.debts || []} 
+          currency={currency}
+          exchangeRate={exchangeRate}
         />
 
         {/* Budgets Section */}
@@ -2845,13 +2895,24 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               <Menu className="w-6 h-6" />
             </button>
             <div className="text-right">
-              <motion.h1 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-4xl font-black text-[var(--text-main)] tracking-tight"
-              >
-                رۆژانەی یوسف
-              </motion.h1>
+              <div className="flex items-center gap-2">
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-4xl font-black text-[var(--text-main)] tracking-tight"
+                >
+                  رۆژانەی یوسف
+                </motion.h1>
+                <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest">PRO</div>
+                <div className={cn(
+                  "px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-1",
+                  healthScore >= 80 ? "bg-emerald-100 text-emerald-600" : 
+                  healthScore >= 50 ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"
+                )}>
+                  <Activity className="w-3 h-3" />
+                  تەندروستی: {healthScore}%
+                </div>
+              </div>
               <p className="text-[var(--text-muted)] font-bold mt-1">بەڕێوەبردنی زیرەکانەی کار و دارایی</p>
             </div>
           </div>
@@ -2868,6 +2929,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               />
             </div>
             
+            <button 
+              onClick={() => setCurrency(currency === 'IQD' ? 'USD' : 'IQD')}
+              className="w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all font-black text-xs"
+              title="گۆڕینی دراو"
+            >
+              {currency === 'IQD' ? 'د.ع' : '$'}
+            </button>
+
             <button 
               onClick={() => setDarkMode(!darkMode)}
               className="w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all"
@@ -3007,7 +3076,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 />
               )}
               {activeTab === 'reports' && (
-                <ReportsDashboard data={data} />
+                <ReportsDashboard 
+                  data={data} 
+                  currency={currency}
+                  exchangeRate={exchangeRate}
+                />
               )}
               {activeTab === 'ai_chat' && (
                 <SmartAssistant data={data} />
@@ -4108,6 +4181,20 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           message={voiceMessage}
           setVoiceMessage={setVoiceMessage}
         />
+
+        {/* System Manager Floating Button */}
+        <motion.button
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setActiveTab('ai_chat')}
+          className="fixed bottom-24 right-6 w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-full shadow-2xl flex items-center justify-center z-50 group no-print"
+        >
+          <div className="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-20 group-hover:opacity-40" />
+          <BrainCircuit className="w-8 h-8 relative z-10" />
+          <div className="absolute -top-12 right-0 bg-slate-800 text-white text-[10px] font-black px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+            بەڕێوەبەری سیستەم
+          </div>
+        </motion.button>
       </AnimatePresence>
     </div>
   );

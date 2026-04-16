@@ -9,11 +9,20 @@ import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, isSam
 
 interface Props {
   data: AppData;
+  currency?: 'IQD' | 'USD';
+  exchangeRate?: number;
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-export const ReportsDashboard: React.FC<Props> = ({ data }) => {
+export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exchangeRate = 1500 }) => {
+  const formatValue = (amount: number) => {
+    if (currency === 'USD') {
+      return `$${(amount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `${amount.toLocaleString()} د.ع`;
+  };
+
   const last6Months = useMemo(() => {
     const end = new Date();
     const start = subMonths(end, 5);
@@ -83,7 +92,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data }) => {
             <span className="text-sm font-bold text-[var(--text-muted)]">کۆی داهات (ئەم مانگە)</span>
           </div>
           <p className="text-2xl font-black text-[var(--text-main)]">
-            {monthlyData[monthlyData.length - 1].income.toLocaleString()} د.ع
+            {formatValue(monthlyData[monthlyData.length - 1].income)}
           </p>
         </div>
 
@@ -95,7 +104,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data }) => {
             <span className="text-sm font-bold text-[var(--text-muted)]">کۆی خەرجی (ئەم مانگە)</span>
           </div>
           <p className="text-2xl font-black text-[var(--text-main)]">
-            {monthlyData[monthlyData.length - 1].expense.toLocaleString()} د.ع
+            {formatValue(monthlyData[monthlyData.length - 1].expense)}
           </p>
         </div>
 
@@ -107,7 +116,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data }) => {
             <span className="text-sm font-bold text-[var(--text-muted)]">قازانجی پاک (ئەم مانگە)</span>
           </div>
           <p className="text-2xl font-black text-green-600">
-            {monthlyData[monthlyData.length - 1].profit.toLocaleString()} د.ع
+            {formatValue(monthlyData[monthlyData.length - 1].profit)}
           </p>
         </div>
 
@@ -119,7 +128,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data }) => {
             <span className="text-sm font-bold text-[var(--text-muted)]">کۆی ئیشی کارگە</span>
           </div>
           <p className="text-2xl font-black text-purple-600">
-            {monthlyData[monthlyData.length - 1].revenue.toLocaleString()} د.ع
+            {formatValue(monthlyData[monthlyData.length - 1].revenue)}
           </p>
         </div>
       </div>
