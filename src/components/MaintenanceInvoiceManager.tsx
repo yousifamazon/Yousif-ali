@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { MaintenanceInvoice, MaintenanceItem } from '../types';
-import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, Mic } from 'lucide-react';
 import { Button } from './Button';
+import { SpeechToTextButton } from '../App';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -600,8 +601,9 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
           <div className="invoice-paper shadow-2xl relative">
               {/* Header */}
               <div className="header">
-                  <div className="header-text" style={{textAlign: 'right'}}>
+                  <div className="header-text" style={{textAlign: 'right', display: 'flex', alignItems: 'center', gap: '5px'}}>
                       <input type="text" className="inv-input transparent" style={{fontSize: '1.17em', fontWeight: 'bold', textAlign: 'right', width: '100%'}} value={title} onChange={e => setTitle(e.target.value)} placeholder="ناونیشانی وەسڵ..." />
+                      <SpeechToTextButton onResult={(text) => setTitle(text)} className="p-1" />
                   </div>
                   <div className="header-logo">
                       <svg width="55" height="55" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -658,6 +660,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                           <div style={{display: 'flex', alignItems: 'center', gap: '5px', flex: 1}}>
                             ناوی کڕیار: 
                             <input type="text" className="inv-input transparent" style={{fontWeight: 'bold'}} value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="ناوی کڕیار..." />
+                            <SpeechToTextButton onResult={(text) => setCustomerName(prev => prev ? `${prev} ${text}` : text)} className="p-1" />
                           </div>
                           <div style={{display: 'flex', alignItems: 'center', gap: '5px', width: '120px'}}>
                             مۆبایل: 
@@ -668,6 +671,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                           <div style={{display: 'flex', alignItems: 'center', gap: '5px', width: '100%'}}>
                             زانیاری ئامێر / کار: 
                             <input type="text" className="inv-input transparent" style={{fontWeight: 'bold'}} value={deviceInfo} onChange={e => setDeviceInfo(e.target.value)} placeholder="جۆری ئامێر یان کێشەکە..." />
+                            <SpeechToTextButton onResult={(text) => setDeviceInfo(prev => prev ? `${prev} ${text}` : text)} className="p-1" />
                           </div>
                       </div>
                   </div>
@@ -783,8 +787,9 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                   
                   <div className="notes-box">
                       <div className="notes-title">ملاحظات (تێبینی)</div>
-                      <div className="notes-content">
+                      <div className="notes-content" style={{display: 'flex', alignItems: 'flex-start', gap: '5px'}}>
                           <textarea className="inv-input transparent" style={{minHeight: '50px', resize: 'none'}} value={notes} onChange={e => setNotes(e.target.value)} placeholder="تێبینییەکان..."></textarea>
+                          <SpeechToTextButton onResult={(text) => setNotes(prev => prev ? `${prev}\n${text}` : text)} className="p-1" />
                       </div>
                   </div>
               </div>

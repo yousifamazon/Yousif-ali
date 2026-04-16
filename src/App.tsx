@@ -100,6 +100,7 @@ import {
   syncProductToFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
+import { FinancialDashboard } from './components/FinancialDashboard';
 import { 
   auth, 
   loginWithGoogle, 
@@ -230,6 +231,42 @@ const VoiceCommandModal = ({
 
   const startListening = async () => {
     try {
+      // Check if we can use native speech recognition first for better UX
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ku-IQ'; // Try Kurdish, though browser support varies
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+          setIsListening(true);
+          setVoiceMessage("گوێم لێیە، قسە بکە...");
+        };
+
+        recognition.onresult = (event: any) => {
+          const text = event.results[0][0].transcript;
+          onCommand(text);
+          setIsListening(false);
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          // Fallback to audio recording if native fails
+          startAudioRecording();
+        };
+
+        recognition.start();
+      } else {
+        startAudioRecording();
+      }
+    } catch (error) {
+      startAudioRecording();
+    }
+  };
+
+  const startAudioRecording = async () => {
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -342,6 +379,47 @@ const VoiceCommandModal = ({
         </div>
       )}
     </AnimatePresence>
+  );
+};
+
+export const SpeechToTextButton = ({ onResult, className }: { onResult: (text: string) => void; className?: string }) => {
+  const [isListening, setIsListening] = useState(false);
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("ببورە، وەرگرتنی دەنگ لەم وێبگەڕەدا پشتگیری ناکرێت.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ku-IQ';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const text = event.results[0][0].transcript;
+      onResult(text);
+    };
+    recognition.onerror = () => setIsListening(false);
+
+    recognition.start();
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={startListening}
+      className={cn(
+        "p-2 rounded-xl transition-all",
+        isListening ? "bg-red-500 text-white animate-pulse" : "bg-blue-50 text-blue-600 hover:bg-blue-100",
+        className
+      )}
+    >
+      {isListening ? <Mic className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+    </button>
   );
 };
 
@@ -1979,322 +2057,107 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const renderDashboard = () => (
-    <div className="space-y-8 pb-24">
-      {/* Bento Grid Header */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Main Balance Card */}
-        <Card className="md:col-span-2 bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none p-8 flex flex-col justify-between min-h-[240px]">
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-8">
-              <div>
-                <p className="text-blue-100 font-medium mb-1">کۆی گشتی باڵانس</p>
-                <h2 className="text-4xl sm:text-5xl font-black tracking-tight">
-                  {stats.balance.toLocaleString()} <span className="text-xl font-normal opacity-80">د.ع</span>
-                </h2>
-                <p className="text-blue-200 text-sm mt-2 font-bold flex items-center gap-1">
-                  <Vault className="w-4 h-4" /> کۆی پاشەکەوت: {stats.personalSavings.toLocaleString()} د.ع
-                </p>
-              </div>
-              <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-                <Wallet className="w-8 h-8" />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4 rounded-xl" onClick={() => {
-                setNewTransaction({ ...initialTransactionState, type: 'income', category: 'personal' });
-                setShowTransactionModal(true);
-              }}>
-                <Plus className="w-4 h-4" /> داهات
-              </Button>
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4 rounded-xl" onClick={() => {
-                setNewTransaction({ ...initialTransactionState, type: 'expense', category: 'personal' });
-                setShowTransactionModal(true);
-              }}>
-                <ArrowUpRight className="w-4 h-4" /> خەرجی
-              </Button>
-              <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-none px-4 rounded-xl" onClick={() => {
-                setNewTransaction({ ...initialTransactionState, type: 'savings', category: 'personal', savingsEffect: 'subtract' });
-                setShowTransactionModal(true);
-              }}>
-                <Vault className="w-4 h-4" /> هەڵگرتن
-              </Button>
-            </div>
-          </div>
-          <div className="absolute -right-10 -bottom-10 opacity-10">
-            <Wallet className="w-64 h-64" />
-          </div>
-        </Card>
-
-        {/* AI Advisor Card */}
-        <Card className="md:col-span-2 bg-[var(--bg-card)] border-[var(--border-color)] overflow-hidden relative group">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl">
-              <BrainCircuit className="w-6 h-6" />
-            </div>
-            <h3 className="font-black text-[var(--text-main)]">ڕاوێژکاری ژیری دەستکرد</h3>
-            {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-500" />}
-          </div>
-          
-          <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
-            {aiInsights.length > 0 ? (
-              aiInsights.map((insight, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className={cn(
-                    "p-3 rounded-2xl border flex gap-3",
-                    insight.priority === 'high' ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20" : "bg-[var(--bg-main)] border-[var(--border-color)]"
-                  )}
-                >
-                  <div className="mt-1">
-                    {insight.type === 'saving' ? <Vault className="w-4 h-4 text-green-500" /> : 
-                     insight.type === 'spending' ? <TrendingDown className="w-4 h-4 text-red-500" /> :
-                     insight.type === 'debt' ? <AlertCircle className="w-4 h-4 text-amber-500" /> :
-                     <Lightbulb className="w-4 h-4 text-blue-500" />}
+    <div className="space-y-10 pb-24">
+      <FinancialDashboard 
+        invoices={data.maintenanceInvoices || []} 
+        transactions={data.transactions || []} 
+        debts={data.debts || []} 
+      />
+      
+      {/* AI Insights Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+            <BrainCircuit className="w-7 h-7 text-purple-500" />
+            ڕاوێژکاری ژیری دەستکرد
+          </h2>
+          {isAnalyzing && <Loader2 className="w-5 h-5 animate-spin text-purple-500" />}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {aiInsights.length > 0 ? (
+            aiInsights.map((insight, idx) => (
+              <Card key={`ai-insight-${idx}`} className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "p-3 rounded-2xl",
+                    insight.type === 'saving' ? "bg-green-100 text-green-600" :
+                    insight.type === 'spending' ? "bg-red-100 text-red-600" :
+                    insight.type === 'debt' ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
+                  )}>
+                    <Lightbulb className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-[var(--text-main)] mb-0.5">{insight.title}</h4>
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] leading-relaxed">{insight.content}</p>
-                  </div>
-                </motion.div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Sparkles className="w-8 h-8 text-purple-300 mb-2" />
-                <p className="text-xs font-bold text-[var(--text-muted)]">خەریکی شیکردنەوەی داتاکانتم...</p>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Stats Mini Cards */}
-        <Card className="bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20 flex flex-col justify-between">
-          <p className="text-xs font-bold text-green-700 dark:text-green-400">داهاتی ئەم مانگە</p>
-          <div className="mt-2">
-            <h4 className="text-xl font-black text-green-600">{stats.monthlyIncome.toLocaleString()}</h4>
-            <p className="text-[10px] text-green-500 font-bold">+١٢٪ بەراورد بە مانگی پێشوو</p>
-          </div>
-        </Card>
-
-        <Card className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20 flex flex-col justify-between">
-          <p className="text-xs font-bold text-red-700 dark:text-red-400">خەرجی ئەم مانگە</p>
-          <div className="mt-2">
-            <h4 className="text-xl font-black text-red-600">{stats.monthlyExpense.toLocaleString()}</h4>
-            <p className="text-[10px] text-red-500 font-bold">-٥٪ بەراورد بە مانگی پێشوو</p>
-          </div>
-        </Card>
-
-        <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20 flex flex-col justify-between">
-          <p className="text-xs font-bold text-amber-700 dark:text-amber-400">کۆی قەرزەکان</p>
-          <div className="mt-2">
-            <h4 className="text-xl font-black text-amber-600">{(data.debts || []).filter(d => d.type === 'owed' && !d.completed).reduce((acc, d) => acc + d.amount, 0).toLocaleString()}</h4>
-            <p className="text-[10px] text-amber-500 font-bold">٣ کەس چاوەڕێی پارەن</p>
-          </div>
-        </Card>
-
-        <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20 flex flex-col justify-between">
-          <p className="text-xs font-bold text-blue-700 dark:text-blue-400">ئیشەکانی ئەمڕۆ</p>
-          <div className="mt-2">
-            <h4 className="text-xl font-black text-blue-600">{(data.tasks || []).filter(t => isToday(parseISO(t.date)) && !t.completed).length} ئیش</h4>
-            <p className="text-[10px] text-blue-500 font-bold">٢ ئیشی گرنگ ماوە</p>
-          </div>
-        </Card>
-
-        <Card className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900/20 flex flex-col justify-between">
-          <p className="text-xs font-bold text-yellow-700 dark:text-yellow-400">کۆی پاشەکەوت</p>
-          <div className="mt-2">
-            <h4 className="text-xl font-black text-yellow-600">{(data.savingsGoals || []).reduce((acc, g) => acc + g.currentAmount, 0).toLocaleString()}</h4>
-            <p className="text-[10px] text-yellow-500 font-bold">{(data.savingsGoals || []).length} ئامانجی پاشەکەوت</p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Voice Command Floating Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setShowVoiceModal(true)}
-        className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 transition-colors"
-      >
-        <Mic className="w-8 h-8" />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute inset-0 rounded-full border-4 border-blue-400"
-        />
-      </motion.button>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { icon: Fuel, label: 'بەنزین', color: 'bg-red-50 dark:bg-red-900/20 text-red-600' },
-          { icon: ShoppingCart, label: 'مارکێت', color: 'bg-green-50 dark:bg-green-900/20 text-green-600' },
-          { icon: Zap, label: 'کارەبا', color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' },
-          { icon: Vault, label: 'پاشەکەوت', color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600' },
-        ].map((action, i) => (
-          <button 
-            key={`${i}-quick-action`} 
-            onClick={() => {
-              if (action.label === 'پاشەکەوت') {
-                setActiveTab('savings');
-              } else {
-                setNewTransaction({ 
-                  ...initialTransactionState,
-                  description: action.label, 
-                  category: 'personal',
-                  type: 'expense'
-                });
-                setShowTransactionModal(true);
-              }
-            }}
-            className="p-4 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2 group active:scale-95"
-          >
-            <div className={cn("p-3 rounded-2xl transition-transform group-hover:scale-110", action.color)}>
-              <action.icon className="w-6 h-6" />
-            </div>
-            <span className="font-bold text-sm text-[var(--text-main)]">{action.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Savings Goals Section (Dashboard) */}
-      {(data.savingsGoals || []).length > 0 && (
-        <section className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-black text-[var(--text-main)] flex items-center gap-2">
-              <Vault className="w-6 h-6 text-yellow-600" /> ئامانجەکانی پاشەکەوت
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('savings')} className="text-blue-600 font-bold">
-              بینینی هەمووی <ArrowLeft className="w-4 h-4 mr-1" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(data.savingsGoals || []).slice(0, 2).map(goal => {
-              const progress = (goal.currentAmount / goal.targetAmount) * 100;
-              return (
-                <Card key={`${goal.id}-dash-savings`} className="p-5 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <h4 className="font-bold">{goal.title}</h4>
-                    <span className="text-xs font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
-                      {Math.round(progress)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-[var(--bg-main)] rounded-full h-2 overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all duration-500", progress >= 100 ? "bg-green-500" : "bg-blue-500")} 
-                      style={{ width: `${Math.min(progress, 100)}%` }} 
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)]">
-                    <span>{goal.currentAmount.toLocaleString()} د.ع</span>
-                    <span>{goal.targetAmount.toLocaleString()} د.ع</span>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-          {/* Export Actions */}
-          <div className="grid grid-cols-3 gap-3 no-print">
-            <button onClick={exportToExcel} className="flex items-center justify-center gap-2 p-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all active:scale-95">
-              <Briefcase className="w-5 h-5" /> Excel
-            </button>
-            <button onClick={exportToPDF} className="flex items-center justify-center gap-2 p-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all active:scale-95">
-              <AlertCircle className="w-5 h-5" /> PDF
-            </button>
-            <button onClick={handlePrint} className="flex items-center justify-center gap-2 p-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-900 transition-all active:scale-95">
-              <Clock className="w-5 h-5" /> Print
-            </button>
-          </div>
-
-          <div className="flex justify-center mb-10 no-print">
-            <button 
-              onClick={() => setShowResetModal(true)} 
-              className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-all active:scale-95"
-            >
-              <Trash2 className="w-4 h-4" /> سڕینەوەی هەموو داتاکان
-            </button>
-          </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Tasks Section */}
-        <section className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-black flex items-center gap-2">
-              <CheckSquare className="w-6 h-6 text-blue-600" /> ئیشەکانی ئەمڕۆ
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('tasks')}>هەمووی</Button>
-          </div>
-          <div className="space-y-3">
-            {(data.tasks || []).filter(t => isToday(parseISO(t.date)) && !t.completed).length === 0 ? (
-              <div className="p-12 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)] text-center">
-                <p className="text-[var(--text-muted)] font-medium">هیچ ئیشێکی ماوە نییە بۆ ئەمڕۆ</p>
-              </div>
-            ) : (
-              (data.tasks || []).filter(t => isToday(parseISO(t.date)) && !t.completed).slice(0, 4).map(task => (
-                <div key={`${task.id}-today-task`} className="group bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4 hover:border-blue-200 transition-all">
-                  <button onClick={() => toggleTask(task.id)} className="text-[var(--text-muted)] hover:text-blue-600 transition-colors">
-                    <Circle className="w-6 h-6" />
-                  </button>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-[var(--text-main)]">{task.title}</h4>
-                    <div className="mt-1 space-y-0.5">
-                      {(task.details || []).map((d, i) => (
-                        <p key={d.id || i} className="text-[10px] text-[var(--text-muted)]">
-                          <span className="font-black text-[var(--text-muted)]">{d.subject}:</span> {d.work}
-                        </p>
-                      ))}
+                    <h4 className="font-black text-[var(--text-main)] mb-1">{insight.title}</h4>
+                    <p className="text-sm text-[var(--text-muted)] font-bold leading-relaxed">{insight.content}</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase",
+                        insight.priority === 'high' ? "bg-red-100 text-red-600" :
+                        insight.priority === 'medium' ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600"
+                      )}>
+                        {insight.priority === 'high' ? 'گرنگ' : insight.priority === 'medium' ? 'ناوەند' : 'ئاسایی'}
+                      </span>
                     </div>
                   </div>
-                  <Badge variant={task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'default'}>
-                    {task.priority === 'high' ? 'گرنگ' : task.priority === 'medium' ? 'ناوەند' : 'ئاسایی'}
-                  </Badge>
                 </div>
-              ))
-            )}
-          </div>
-        </section>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full p-16 bg-[var(--bg-card)] rounded-[40px] border border-dashed border-[var(--border-color)] text-center">
+              <BrainCircuit className="w-16 h-16 text-[var(--text-muted)] mx-auto mb-4 opacity-10" />
+              <p className="text-[var(--text-muted)] font-bold">خەریکی کۆکردنەوەی زانیارییەکانم بۆ پێدانی ئامۆژگاری...</p>
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Finance Section */}
-        <section className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-black flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-green-600" /> کۆتا جوڵەکان
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('personal')}>هەمووی</Button>
-          </div>
-          <div className="space-y-3">
-            {(data.transactions || []).slice(0, 4).map(t => (
-              <div key={`${t.id}-recent-transaction`} className="bg-[var(--bg-card)] p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-center gap-4">
-                <div className={cn(
-                  "p-2.5 rounded-2xl",
-                  t.type === 'income' ? "bg-green-50 dark:bg-green-900/20 text-green-600" : "bg-red-50 dark:bg-red-900/20 text-red-600"
-                )}>
-                  {t.type === 'income' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-[var(--text-main)]">{t.description}</h4>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t.category === 'work' ? 'کارگە' : 'تایبەت'}</span>
-                    <span className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
-                    <span className="text-[10px] font-bold text-[var(--text-muted)]">{format(parseISO(t.date), 'MMM d')}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={cn("font-black text-lg", t.type === 'income' ? "text-green-600" : "text-red-600")}>
-                    {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}
-                  </p>
-                  {t.paymentMethod === 'own_money' && <p className="text-[10px] font-bold text-amber-600">لە گیرفانی خۆت</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Button variant="accent" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => {
+          setNewTransaction({ ...initialTransactionState, type: 'income', category: 'personal' });
+          setShowTransactionModal(true);
+        }}>
+          <Plus className="w-6 h-6" />
+          <span>داهات</span>
+        </Button>
+        <Button variant="danger" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => {
+          setNewTransaction({ ...initialTransactionState, type: 'expense', category: 'personal' });
+          setShowTransactionModal(true);
+        }}>
+          <ArrowUpRight className="w-6 h-6" />
+          <span>خەرجی</span>
+        </Button>
+        <Button variant="secondary" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => setActiveTab('maintenance')}>
+          <FileText className="w-6 h-6" />
+          <span>وەسڵ</span>
+        </Button>
+        <Button variant="secondary" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => setShowVoiceModal(true)}>
+          <Mic className="w-6 h-6 text-blue-600" />
+          <span>دەنگ</span>
+        </Button>
+      </div>
+
+      {/* Export Actions */}
+      <div className="grid grid-cols-3 gap-3 no-print">
+        <button onClick={exportToExcel} className="flex items-center justify-center gap-2 p-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all active:scale-95">
+          <Briefcase className="w-5 h-5" /> Excel
+        </button>
+        <button onClick={exportToPDF} className="flex items-center justify-center gap-2 p-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all active:scale-95">
+          <AlertCircle className="w-5 h-5" /> PDF
+        </button>
+        <button onClick={handlePrint} className="flex items-center justify-center gap-2 p-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-900 transition-all active:scale-95">
+          <Clock className="w-5 h-5" /> Print
+        </button>
+      </div>
+
+      <div className="flex justify-center mb-10 no-print">
+        <button 
+          onClick={() => setShowResetModal(true)} 
+          className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-all active:scale-95"
+        >
+          <Trash2 className="w-4 h-4" /> سڕینەوەی هەموو داتاکان
+        </button>
       </div>
     </div>
   );
