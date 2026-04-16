@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MaintenanceInvoice, MaintenanceItem } from '../types';
-import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, Mic } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileText, Download, CheckCircle, XCircle, Mic } from 'lucide-react';
 import { Button } from './Button';
 import { SpeechToTextButton } from '../App';
 import { format } from 'date-fns';
@@ -132,9 +132,21 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
     if (window.confirm('دڵنیایت کە پارەی ئەم وەسڵە وەرگیراوە؟')) {
       const updatedInvoice = {
         ...invoice,
-        cashPaid: invoice.cashPaid + invoice.debtAmount,
+        cashPaid: invoice.totalAfterDiscount,
         debtAmount: 0,
         remainingBalance: 0
+      };
+      onSave(updatedInvoice);
+    }
+  };
+
+  const handleMarkAsUnpaid = (invoice: MaintenanceInvoice) => {
+    if (window.confirm('دڵنیایت لە وەرنەگرتنی ئەم وەسڵە؟ (قەرزەکە دەگەڕێتەوە)')) {
+      const updatedInvoice = {
+        ...invoice,
+        cashPaid: 0,
+        debtAmount: invoice.totalAfterDiscount,
+        remainingBalance: invoice.totalAfterDiscount
       };
       onSave(updatedInvoice);
     }
@@ -554,7 +566,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
             .invoice-paper .header-logo { width: 34%; text-align: center; display: flex; flex-direction: column; align-items: center;}
             .invoice-paper .header h3 { margin: 0; font-size: 20px; font-weight: bold; color: #222;}
             .invoice-paper .header p { margin: 3px 0; font-size: 13px; font-weight: bold;}
-            .invoice-paper .invoice-title-container { border-bottom: 1px solid #000; margin-bottom: 15px; padding-bottom: 10px;}
+            .invoice-paper .invoice-title-container { border-bottom: 1px solid #000; margin-bottom: 15px; padding-bottom: 10px; position: relative; }
             .invoice-paper .invoice-title { background-color: #e0e0e0; padding: 3px 15px; font-weight: bold; border: 1px solid #000; width: fit-content; margin-top: 5px; font-size: 14px; display: flex; align-items: center; gap: 5px;}
             .invoice-paper .info-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
             .invoice-paper .info-box { border: 1px solid #000; padding: 5px 10px; width: 47%; border-radius: 5px; line-height: 1.6; }
@@ -624,8 +636,65 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                     ڕقم 
                     <input type="text" className="inv-input inline" style={{width: '80px', marginRight: '10px'}} value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="000" />
                   </div>
+                  <div className="no-print" style={{
+                    position: 'absolute',
+                    left: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    gap: '5px'
+                  }}>
+                    {debtAmount === 0 ? (
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('دڵنیایت لە وەرنەگرتنی ئەم وەسڵە؟ (قەرزەکە دەگەڕێتەوە)')) {
+                            setCashPaid(0);
+                          }
+                        }}
+                        title="گۆڕین بۆ وەرنەگیراو"
+                        style={{
+                          backgroundColor: '#e8f5e9',
+                          color: '#2e7d32',
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          border: '1px solid #c8e6c9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        <CheckCircle className="w-4 h-4" /> وەرگیراوە
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setCashPaid(totalAfterDiscount)}
+                        title="وەک وەرگیراو دیاری بکە"
+                        style={{
+                          backgroundColor: '#fff3e0',
+                          color: '#e65100',
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          border: '1px solid #ffe0b2',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" /> وەرنەگیراوە
+                      </button>
+                    )}
+                  </div>
+                  {/* Static badge for print/image only */}
                   {debtAmount === 0 && (
-                    <div style={{
+                    <div className="only-print" style={{
                       position: 'absolute',
                       left: '20px',
                       top: '50%',
@@ -934,7 +1003,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
               <Button variant="secondary" size="sm" onClick={() => handleDownloadImage(invoice)} className="flex-1 flex items-center justify-center gap-2">
                 <Download className="w-4 h-4" /> وێنە
               </Button>
-              {invoice.debtAmount > 0 && (
+              {invoice.debtAmount > 0 ? (
                 <Button 
                   variant="secondary" 
                   size="sm" 
@@ -942,6 +1011,15 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                   className="flex-1 flex items-center justify-center gap-2 bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
                 >
                   <CheckCircle className="w-4 h-4" /> وەرگیرا
+                </Button>
+              ) : (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => handleMarkAsUnpaid(invoice)} 
+                  className="flex-1 flex items-center justify-center gap-2 bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200"
+                >
+                  <XCircle className="w-4 h-4" /> وەرنەگیرا
                 </Button>
               )}
               <button onClick={() => onDelete(invoice.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl">

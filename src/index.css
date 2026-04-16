@@ -61,6 +61,9 @@ body {
   .no-print {
     display: none !important;
   }
+  .only-print {
+    display: block !important;
+  }
   body {
     background: white !important;
   }
@@ -70,4 +73,8 @@ body {
   .border {
     border-color: #e2e8f0 !important;
   }
+}
+
+.only-print {
+  display: none;
 }
