@@ -317,6 +317,27 @@ export const deleteSavingsGoalFromFirebase = async (id: string) => {
   }
 };
 
+export const syncBudgetToFirebase = async (budget: any) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/budgets/${budget.id}`;
+  try {
+    const docRef = doc(db, path);
+    await setDoc(docRef, { ...budget, userId: auth.currentUser.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const deleteBudgetFromFirebase = async (id: string) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/budgets/${id}`;
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
 export const resetFirebaseData = async () => {
   if (!auth.currentUser) return;
   const uid = auth.currentUser.uid;

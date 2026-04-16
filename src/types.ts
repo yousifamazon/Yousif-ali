@@ -60,6 +60,8 @@ export type Transaction = {
   remainingAmount?: number;
   debtAmount?: number;
   savingsEffect?: 'add' | 'subtract' | 'none';
+  isRecurring?: boolean;
+  recurringPeriod?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   createdAt?: string;
 };
 
@@ -149,6 +151,14 @@ export type InventoryItem = {
   lastUpdated: string;
 };
 
+export type Budget = {
+  id: string;
+  category: string;
+  amount: number;
+  period: 'daily' | 'monthly';
+  startDate: string;
+};
+
 export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
@@ -158,6 +168,7 @@ export type AppData = {
   products?: Product[];
   maintenanceInvoices?: MaintenanceInvoice[];
   inventory?: InventoryItem[];
+  budgets?: Budget[];
   exchangeRate?: number; // USD to IQD
   descriptions: string[];
   history?: Record<string, string[]>;

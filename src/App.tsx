@@ -106,7 +106,9 @@ import {
   deleteDebtFromFirebase,
   syncSavingsGoalToFirebase,
   deleteSavingsGoalFromFirebase,
-  syncProductToFirebase
+  syncProductToFirebase,
+  syncBudgetToFirebase,
+  deleteBudgetFromFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { FinancialDashboard } from './components/FinancialDashboard';
@@ -659,6 +661,8 @@ const FormattedNumberInput = ({
 
 export default function App() {
   const [data, setData] = useState<AppData>(getStoredData());
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [newBudget, setNewBudget] = useState({ category: '', amount: 0, period: 'monthly' as const });
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -955,7 +959,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     invoiceNumber: '',
     receiptImage: '',
     isDelivery: false,
-    savingsEffect: 'none'
+    savingsEffect: 'none',
+    isRecurring: false,
+    recurringPeriod: 'monthly'
   };
 
   const handleBarcodeScan = (barcode: string) => {
@@ -1182,6 +1188,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       setData(prev => ({ ...prev, maintenanceInvoices }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/maintenanceInvoices`));
 
+    const budgetsQuery = query(collection(db, `users/${user.uid}/budgets`), orderBy('startDate', 'desc'));
+    const unsubBudgets = onSnapshot(budgetsQuery, (snapshot) => {
+      const budgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      setData(prev => ({ ...prev, budgets }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/budgets`));
+
     return () => {
       unsubTasks();
       unsubTrans();
@@ -1191,6 +1203,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       unsubSavings();
       unsubProducts();
       unsubMaintenance();
+      unsubBudgets();
     };
   }, [user]);
 
@@ -1295,11 +1308,23 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
     const monthlyExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
 
+    const budgetProgress = (data.budgets || []).map(budget => {
+      const spent = monthlyTransactions
+        .filter(t => t.type === 'expense' && (t.description === budget.category || t.subCategory === budget.category))
+        .reduce((acc, t) => acc + t.amount, 0);
+      return {
+        ...budget,
+        spent,
+        remaining: budget.amount - spent,
+        percent: Math.min(100, (spent / budget.amount) * 100)
+      };
+    });
+
     const totalMilk = (data.transactions || [])
       .filter(t => t.category === 'work' && t.description === 'هێنانەوەی شیر')
       .reduce((acc, t) => acc + (t.milkQuantity || 0), 0);
 
-    return { personalExpense, personalIncome, personalSavings, balance, pendingTasks, chartData, monthlyIncome, monthlyExpense, totalMilk };
+    return { personalExpense, personalIncome, personalSavings, balance, pendingTasks, chartData, monthlyIncome, monthlyExpense, totalMilk, budgetProgress };
   }, [data]);
 
   // --- Handlers ---
@@ -1402,7 +1427,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       discount: newTransaction.discount,
       paidAmount: newTransaction.paidAmount,
       remainingAmount: newTransaction.remainingAmount,
-      debtAmount: newTransaction.debtAmount
+      debtAmount: newTransaction.debtAmount,
+      isRecurring: newTransaction.isRecurring || false,
+      recurringPeriod: newTransaction.recurringPeriod || 'monthly'
     };
 
     // Only add work-specific fields if it's a work transaction
@@ -1593,6 +1620,26 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         console.error("Failed to toggle task:", err);
         // Rollback happens automatically via onSnapshot if sync fails
       }
+    }
+  };
+
+  const addBudget = async () => {
+    if (!newBudget.category || !newBudget.amount) return;
+    const budget = {
+      id: crypto.randomUUID(),
+      ...newBudget,
+      startDate: format(new Date(), 'yyyy-MM-dd')
+    };
+    setData(prev => ({ ...prev, budgets: [budget, ...(prev.budgets || [])] }));
+    if (user) await syncBudgetToFirebase(budget);
+    setShowBudgetModal(false);
+    setNewBudget({ category: '', amount: 0, period: 'monthly' });
+  };
+
+  const deleteBudget = async (id: string) => {
+    if (window.confirm('دڵنیایت لە سڕینەوەی ئەم بودجەیە؟')) {
+      setData(prev => ({ ...prev, budgets: (prev.budgets || []).filter(b => b.id !== id) }));
+      if (user) await deleteBudgetFromFirebase(id);
     }
   };
 
@@ -2073,15 +2120,160 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     );
   };
 
-  const renderDashboard = () => (
-    <div className="space-y-10 pb-24">
-      <FinancialDashboard 
-        invoices={data.maintenanceInvoices || []} 
-        transactions={data.transactions || []} 
-        debts={data.debts || []} 
-      />
-      
-      {/* AI Insights Section */}
+  const renderDashboard = () => {
+    const todaySpent = (data.transactions || [])
+      .filter(t => t.type === 'expense' && isToday(parseISO(t.date)))
+      .reduce((acc, t) => acc + t.amount, 0);
+    
+    const monthlyBudget = (data.budgets || []).reduce((acc, b) => acc + b.amount, 0);
+    const dailyLimit = monthlyBudget > 0 ? (monthlyBudget / 30) : 0;
+    const remainingToday = dailyLimit - todaySpent;
+
+    return (
+      <div className="space-y-10 pb-24">
+        {/* Daily Limit Tracker */}
+        {dailyLimit > 0 && (
+          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-3xl" />
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="text-center md:text-right">
+                <p className="text-slate-400 text-sm font-bold mb-1">خەرجی ڕێگەپێدراوی ئەمڕۆ</p>
+                <h3 className="text-4xl font-black">{dailyLimit.toLocaleString()} <span className="text-lg font-normal">د.ع</span></h3>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="relative w-24 h-24">
+                  <svg className="w-full h-full" viewBox="0 0 36 36">
+                    <path className="text-slate-700" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                    <path className={cn(remainingToday < 0 ? "text-red-500" : "text-blue-500")} strokeDasharray={`${Math.min(100, (todaySpent / dailyLimit) * 100)}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col">
+                    <span className="text-xs font-black">{Math.round((todaySpent / dailyLimit) * 100)}%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-center md:text-left">
+                <p className="text-slate-400 text-sm font-bold mb-1">ماوە بۆ ئەمڕۆ</p>
+                <h3 className={cn("text-3xl font-black", remainingToday < 0 ? "text-red-400" : "text-green-400")}>
+                  {Math.abs(remainingToday).toLocaleString()} <span className="text-lg font-normal">د.ع</span>
+                  {remainingToday < 0 && <span className="text-xs block mt-1">زیادەڕۆیی کراوە!</span>}
+                </h3>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <FinancialDashboard 
+          invoices={data.maintenanceInvoices || []} 
+          transactions={data.transactions || []} 
+          debts={data.debts || []} 
+        />
+
+        {/* Budgets Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+              <Wallet className="text-blue-600 w-7 h-7" /> بودجەی مانگانە
+            </h2>
+            <Button onClick={() => setShowBudgetModal(true)} size="sm" variant="secondary">
+              <Plus className="w-4 h-4" /> بودجەی نوێ
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {stats.budgetProgress.length > 0 ? (
+              stats.budgetProgress.map(budget => (
+                <Card key={budget.id} className="relative group">
+                  <button 
+                    onClick={() => deleteBudget(budget.id)}
+                    className="absolute top-4 left-4 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 rounded-xl"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-black text-lg text-[var(--text-main)]">{budget.category}</h4>
+                        <p className="text-xs font-bold text-[var(--text-muted)]">مانگانە: {budget.amount.toLocaleString()} د.ع</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-[var(--text-muted)]">خەرجکراوە: {budget.spent.toLocaleString()}</span>
+                        <span className={cn(budget.remaining < 0 ? "text-red-600" : "text-blue-600")}>
+                          ماوە: {Math.abs(budget.remaining).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="h-3 bg-[var(--bg-main)] rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${budget.percent}%` }}
+                          className={cn(
+                            "h-full transition-all",
+                            budget.percent > 90 ? "bg-red-500" : budget.percent > 70 ? "bg-amber-500" : "bg-blue-600"
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full p-12 bg-[var(--bg-card)] rounded-[40px] border border-dashed border-[var(--border-color)] text-center">
+                <Wallet className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-10" />
+                <p className="text-[var(--text-muted)] font-bold">هیچ بودجەیەک دیاری نەکراوە. بودجەیەک زیاد بکە بۆ کۆنترۆڵکردنی خەرجییەکانت.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Upcoming Recurring Expenses */}
+        {data.transactions?.filter(t => t.isRecurring).length > 0 && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+              <Clock className="text-amber-600 w-7 h-7" /> خەرجییە دووبارەبووەوەکان
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.transactions.filter(t => t.isRecurring).map(t => (
+                <Card key={`recurring-${t.id}`} className="border-r-4 border-r-amber-500">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-black text-lg text-[var(--text-main)]">{t.description}</h4>
+                      <p className="text-xs font-bold text-[var(--text-muted)]">
+                        {t.recurringPeriod === 'daily' ? 'ڕۆژانە' : t.recurringPeriod === 'weekly' ? 'هەفتانە' : t.recurringPeriod === 'monthly' ? 'مانگانە' : 'ساڵانە'}
+                      </p>
+                    </div>
+                    <p className="font-black text-amber-600">{t.amount.toLocaleString()} د.ع</p>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => {
+                        const newT = { ...t, id: crypto.randomUUID(), date: format(new Date(), 'yyyy-MM-dd'), isRecurring: false };
+                        setData(prev => ({ ...prev, transactions: [newT, ...(prev.transactions || [])] }));
+                        if (user) syncTransactionToFirebase(newT);
+                      }}
+                    >
+                      تۆمارکردن بۆ ئەمڕۆ
+                    </Button>
+                    <button 
+                      onClick={() => {
+                        setData(prev => ({ ...prev, transactions: prev.transactions.map(item => item.id === t.id ? { ...item, isRecurring: false } : item) }));
+                        if (user) syncTransactionToFirebase({ ...t, isRecurring: false });
+                      }}
+                      className="p-2 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AI Insights Section */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
@@ -2178,6 +2370,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       </div>
     </div>
   );
+};
 
   const renderTasks = () => (
     <div className="space-y-6 pb-20">
@@ -2874,6 +3067,50 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
       {/* Modals */}
       <AnimatePresence>
+        {showBudgetModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBudgetModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-md flex flex-col">
+              <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
+                <h3 className="text-xl font-black text-[var(--text-main)]">بودجەی نوێ</h3>
+                <button onClick={() => setShowBudgetModal(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-6 space-y-6 kurdish-font">
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بەش / جۆر</label>
+                  <HistoryInput 
+                    value={newBudget.category} 
+                    onChange={val => setNewBudget(p => ({ ...p, category: val }))} 
+                    historyKey="budget_category"
+                    history={data.descriptions}
+                    onSaveHistory={handleSaveHistory}
+                    placeholder="بۆ نموونە: خواردن، بەنزین..." 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بڕی بودجە (دینار)</label>
+                  <FormattedNumberInput 
+                    value={newBudget.amount || ''} 
+                    onChange={val => setNewBudget(p => ({ ...p, amount: val }))} 
+                    className="w-full px-6 py-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-black text-2xl text-center text-[var(--text-main)]" 
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">ماوە</label>
+                  <div className="flex bg-[var(--bg-main)] p-1.5 rounded-2xl">
+                    <button onClick={() => setNewBudget(p => ({ ...p, period: 'monthly' }))} className={cn("flex-1 py-3 rounded-xl font-bold transition-all", newBudget.period === 'monthly' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-[var(--text-muted)]")}>مانگانە</button>
+                    <button onClick={() => setNewBudget(p => ({ ...p, period: 'daily' }))} className={cn("flex-1 py-3 rounded-xl font-bold transition-all", newBudget.period === 'daily' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-[var(--text-muted)]")}>ڕۆژانە</button>
+                  </div>
+                </div>
+                <Button onClick={addBudget} className="w-full py-4 text-lg" disabled={!newBudget.category || !newBudget.amount}>
+                  تۆمارکردن
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showTaskModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowTaskModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
@@ -3116,6 +3353,18 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-black text-[var(--text-muted)] mr-1">بەش (Sub-category)</label>
+                  <HistoryInput 
+                    value={newTransaction.subCategory || ''} 
+                    onChange={val => setNewTransaction(p => ({ ...p, subCategory: val }))} 
+                    historyKey="transaction_subcategory"
+                    history={data.history?.['transaction_subcategory']}
+                    onSaveHistory={handleSaveHistory}
+                    placeholder="بۆ نموونە: ماڵ، ئیش، سەفەر..." 
+                  />
                 </div>
 
                 <div className={cn("space-y-2", (!['بەنزین'].includes(newTransaction.description || '') && newTransaction.type === 'expense') && "hidden")}>
@@ -3493,6 +3742,43 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <input type="date" value={newTransaction.date || ''} onChange={e => setNewTransaction(p => ({ ...p, date: e.target.value }))} className="w-full px-6 py-4 bg-[var(--bg-main)] dark:bg-slate-800/50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-[var(--text-main)]" />
                   </div>
                 </div>
+                <div className="space-y-4 bg-[var(--bg-main)] p-5 rounded-3xl border border-[var(--border-color)]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-blue-600" />
+                      <span className="font-black text-[var(--text-main)]">خەرجی دووبارەبووەوە</span>
+                    </div>
+                    <button 
+                      onClick={() => setNewTransaction(p => ({ ...p, isRecurring: !p.isRecurring }))}
+                      className={cn(
+                        "w-12 h-6 rounded-full transition-all relative",
+                        newTransaction.isRecurring ? "bg-blue-600" : "bg-slate-300"
+                      )}
+                    >
+                      <motion.div 
+                        animate={{ x: newTransaction.isRecurring ? 24 : 4 }}
+                        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                      />
+                    </button>
+                  </div>
+                  {newTransaction.isRecurring && (
+                    <div className="flex bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-color)]">
+                      {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setNewTransaction(prev => ({ ...prev, recurringPeriod: p as any }))}
+                          className={cn(
+                            "flex-1 py-2 rounded-xl text-[10px] font-black transition-all",
+                            newTransaction.recurringPeriod === p ? "bg-blue-600 text-white shadow-md" : "text-[var(--text-muted)]"
+                          )}
+                        >
+                          {p === 'daily' ? 'ڕۆژانە' : p === 'weekly' ? 'هەفتانە' : p === 'monthly' ? 'مانگانە' : 'ساڵانە'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addTransaction}>تۆمارکردن</Button>
               </div>
             </motion.div>
