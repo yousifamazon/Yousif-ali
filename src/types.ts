@@ -109,6 +109,7 @@ export type MaintenanceItem = {
 export type MaintenanceInvoice = {
   id: string;
   invoiceNumber: string;
+  title?: string;
   date: string;
   customerName: string;
   mobile: string;

@@ -18,6 +18,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
   const [editingInvoice, setEditingInvoice] = useState<MaintenanceInvoice | null>(null);
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [title, setTitle] = useState('خەرجی کارگە');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -63,6 +64,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
     const newInvoice: MaintenanceInvoice = {
       id: editingInvoice?.id || crypto.randomUUID(),
       invoiceNumber,
+      title,
       date,
       customerName,
       mobile,
@@ -91,6 +93,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
 
   const resetForm = () => {
     setInvoiceNumber('');
+    setTitle('خەرجی کارگە');
     setDate(format(new Date(), 'yyyy-MM-dd'));
     setCustomerName('');
     setMobile('');
@@ -108,6 +111,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
   const handleEdit = (invoice: MaintenanceInvoice) => {
     setEditingInvoice(invoice);
     setInvoiceNumber(invoice.invoiceNumber);
+    setTitle(invoice.title || 'خەرجی کارگە');
     setDate(invoice.date);
     setCustomerName(invoice.customerName);
     setMobile(invoice.mobile);
@@ -217,7 +221,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         ${invoice.debtAmount === 0 ? '<div class="paid-stamp">وەرگیراوە</div>' : ''}
         <div class="header">
             <div class="header-text" style="text-align: right;">
-                <h3>خەرجی کارگە</h3>
+                <h3>${invoice.title || 'خەرجی کارگە'}</h3>
             </div>
             <div class="header-logo">
                 <svg width="55" height="55" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -390,7 +394,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         ${invoice.debtAmount === 0 ? '<div class="paid-stamp">وەرگیراوە</div>' : ''}
         <div class="header">
             <div class="header-text" style="text-align: right;">
-                <h3>خەرجی کارگە</h3>
+                <h3>${invoice.title || 'خەرجی کارگە'}</h3>
             </div>
             <div class="header-logo">
                 <svg width="55" height="55" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -597,7 +601,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
               {/* Header */}
               <div className="header">
                   <div className="header-text" style={{textAlign: 'right'}}>
-                      <h3>خەرجی کارگە</h3>
+                      <input type="text" className="inv-input transparent" style={{fontSize: '1.17em', fontWeight: 'bold', textAlign: 'right', width: '100%'}} value={title} onChange={e => setTitle(e.target.value)} placeholder="ناونیشانی وەسڵ..." />
                   </div>
                   <div className="header-logo">
                       <svg width="55" height="55" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -729,12 +733,23 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                       </div>
                       <div style={debtAmount > 0 ? {backgroundColor: '#ffebee', color: '#c62828', fontWeight: 'bold'} : {}}>
                         <span>لەسەر حیساب (قەرز):</span> 
-                        <input type="number" className="inv-input transparent num" style={debtAmount > 0 ? {color: '#c62828', fontWeight: 'bold'} : {}} value={debtAmount || ''} onChange={e => setDebtAmount(Number(e.target.value))} placeholder="0" />
+                        <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+                          {remainingBalance < 0 && (
+                            <button 
+                              onClick={() => setDebtAmount(Math.max(0, debtAmount + remainingBalance))}
+                              title="ڕێکخستنی قەرز"
+                              className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-0.5 rounded text-[10px] font-bold transition-colors whitespace-nowrap"
+                            >
+                              ڕێکخستن
+                            </button>
+                          )}
+                          <input type="number" className="inv-input transparent num" style={debtAmount > 0 ? {color: '#c62828', fontWeight: 'bold'} : {}} value={debtAmount || ''} onChange={e => setDebtAmount(Number(e.target.value))} placeholder="0" />
+                        </div>
                       </div>
                       <div>
                         <span>باڵانسی ماوە:</span> 
                         <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                          <span>{remainingBalance.toLocaleString()}</span>
+                          <span style={remainingBalance < 0 ? {color: '#c62828', fontWeight: 'bold'} : {}}>{remainingBalance.toLocaleString()}</span>
                           {remainingBalance > 0 && (
                             <button 
                               onClick={() => setDebtAmount((debtAmount || 0) + remainingBalance)}
@@ -742,6 +757,15 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                               className="bg-red-100 text-red-700 hover:bg-red-200 px-2 py-0.5 rounded text-xs font-bold transition-colors"
                             >
                               + قەرز
+                            </button>
+                          )}
+                          {remainingBalance < 0 && (
+                            <button 
+                              onClick={() => setDebtAmount(Math.max(0, debtAmount + remainingBalance))}
+                              title="ڕێکخستنی قەرز"
+                              className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-0.5 rounded text-xs font-bold transition-colors"
+                            >
+                              ڕێکخستن
                             </button>
                           )}
                         </div>
@@ -850,8 +874,13 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
           >
             <div className="flex justify-between items-start">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-bold text-lg text-[var(--text-main)]">{invoice.customerName || 'بێ ناو'}</h3>
+                  {invoice.title && invoice.title !== 'خەرجی کارگە' && (
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 font-medium">
+                      {invoice.title}
+                    </span>
+                  )}
                   {invoice.debtAmount === 0 && (
                     <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" /> وەرگیراوە
@@ -865,8 +894,13 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
               </div>
             </div>
             
-            <div className="text-sm text-[var(--text-muted)] line-clamp-2">
-              {invoice.deviceInfo}
+            <div className="text-sm text-[var(--text-muted)] flex flex-col gap-1">
+              <div className="line-clamp-1"><strong>ئامێر:</strong> {invoice.deviceInfo}</div>
+              {invoice.technicianName && (
+                <div className="text-xs bg-[var(--bg-main)] px-2 py-1 rounded border border-[var(--border-color)] inline-block w-fit">
+                  <strong>تەکنیکار:</strong> {invoice.technicianName}
+                </div>
+              )}
             </div>
 
             {invoice.debtAmount > 0 && (
