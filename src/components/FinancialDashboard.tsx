@@ -155,7 +155,7 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
           <Icon className="w-6 h-6 text-white" />
         </div>
         {trend !== undefined && (
-          <div className={cn("flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg", trend <= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600")}>
+          <div className={cn("flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg", trend <= 0 ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400")}>
             {trend <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
             {Math.abs(Math.round(trend))}%
           </div>

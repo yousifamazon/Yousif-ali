@@ -670,7 +670,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports' | 'inventory' | 'ai_chat' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports' | 'ai_chat' | 'settings'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
   const healthScore = useMemo(() => {
@@ -1980,13 +1980,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4 bg-red-50 border-red-100">
-            <p className="text-sm font-bold text-red-800">قەرزارم:</p>
-            <p className="text-xl font-black text-red-600">{totalOwed.toLocaleString()} د.ع</p>
+          <Card className="p-4 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20">
+            <p className="text-sm font-bold text-red-800 dark:text-red-300">قەرزارم:</p>
+            <p className="text-xl font-black text-red-600 dark:text-red-400">{totalOwed.toLocaleString()} د.ع</p>
           </Card>
-          <Card className="p-4 bg-green-50 border-green-100">
-            <p className="text-sm font-bold text-green-800">قەرزم لایە:</p>
-            <p className="text-xl font-black text-green-600">{totalOwing.toLocaleString()} د.ع</p>
+          <Card className="p-4 bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20">
+            <p className="text-sm font-bold text-green-800 dark:text-green-300">قەرزم لایە:</p>
+            <p className="text-xl font-black text-green-600 dark:text-green-400">{totalOwing.toLocaleString()} د.ع</p>
           </Card>
         </div>
 
@@ -2235,7 +2235,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 <Card key={budget.id} className="relative group">
                   <button 
                     onClick={() => deleteBudget(budget.id)}
-                    className="absolute top-4 left-4 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 rounded-xl"
+                    className="absolute top-4 left-4 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -2250,7 +2250,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs font-bold">
                         <span className="text-[var(--text-muted)]">خەرجکراوە: {budget.spent.toLocaleString()}</span>
-                        <span className={cn(budget.remaining < 0 ? "text-red-600" : "text-blue-600")}>
+                        <span className={cn(budget.remaining < 0 ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400")}>
                           ماوە: {Math.abs(budget.remaining).toLocaleString()}
                         </span>
                       </div>
@@ -2743,14 +2743,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.milkQuantity ? <span className="text-[11px] font-bold text-blue-600 uppercase bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">{t.milkQuantity} لیتر شیر</span> : null}
                         {t.fuelLiters ? <span className="text-[11px] font-bold text-red-600 uppercase bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">{t.fuelLiters} لیتر {t.fuelType}</span> : null}
                         {t.fuelPricePerLiter ? <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">نرخی لیتر: {t.fuelPricePerLiter.toLocaleString()}</span> : null}
-                        {t.category === 'work' && t.maintenanceType && <span className="text-[11px] font-bold text-amber-700 uppercase bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">{t.maintenanceType}</span>}
+                        {t.maintenanceType && <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">{t.maintenanceType}</span>}
                         {t.workLocation && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">شوێن: {t.workLocation}</span>}
                         {t.shopName && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">ناوی شوێن: {t.shopName}</span>}
                         {t.itemsBought && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">پێداویستی: {t.itemsBought}</span>}
                         {t.customerName && <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">کڕیار: {t.customerName}</span>}
                         {t.invoiceNumber && <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">قایمە: {t.invoiceNumber}</span>}
                         {t.driverName && <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase bg-[var(--bg-main)] px-2 py-1 rounded-lg">سایەق: {t.driverName}</span>}
-                        {t.discount ? <span className="text-[11px] font-bold text-orange-600 uppercase bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">داشکاندن: {t.discount.toLocaleString()}</span> : null}
+                        {t.discount ? <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">داشکاندن: {t.discount.toLocaleString()}</span> : null}
                         {t.paidAmount ? <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">وەرگیراو: {t.paidAmount.toLocaleString()}</span> : null}
                         {t.remainingAmount ? <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">ماوە: {t.remainingAmount.toLocaleString()}</span> : null}
                         {t.debtAmount ? <span className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">قەرز: {t.debtAmount.toLocaleString()}</span> : null}
@@ -2994,7 +2994,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'tasks', label: 'ئەرکەکان', icon: CheckSquare },
                     { id: 'personal', label: 'دارایی', icon: Wallet },
                     { id: 'maintenance', label: 'وەسڵی سیانە', icon: FileText },
-                    { id: 'inventory', label: 'مەخزەن', icon: Package },
                     { id: 'customers', label: 'کڕیاران', icon: User },
                     { id: 'reports', label: 'ڕاپۆرتەکان', icon: TrendingUp },
                     { id: 'ai_chat', label: 'یاریدەدەری زیرەک', icon: BrainCircuit },
@@ -3040,34 +3039,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'tasks' && renderTasks()}
               {activeTab === 'personal' && renderFinance('personal')}
               {activeTab === 'maintenance' && renderMaintenanceInvoices()}
-              {activeTab === 'inventory' && (
-                <InventoryManager 
-                  items={data.inventory || []} 
-                  onSave={(item) => {
-                    setData(prev => {
-                      const exists = prev.inventory?.find(i => i.id === item.id);
-                      const newInv = exists 
-                        ? prev.inventory?.map(i => i.id === item.id ? item : i)
-                        : [item, ...(prev.inventory || [])];
-                      const newData = { ...prev, inventory: newInv };
-                      saveToStorage(newData);
-                      if (user) {
-                        setDoc(doc(db, `users/${user.uid}/inventory/${item.id}`), item)
-                          .catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/inventory/${item.id}`));
-                      }
-                      return newData;
-                    });
-                  }}
-                  onDelete={(id) => {
-                    setData(prev => {
-                      const newInv = prev.inventory?.filter(i => i.id !== id);
-                      const newData = { ...prev, inventory: newInv };
-                      saveToStorage(newData);
-                      return newData;
-                    });
-                  }}
-                />
-              )}
               {activeTab === 'customers' && (
                 <CustomerManager 
                   invoices={data.maintenanceInvoices}

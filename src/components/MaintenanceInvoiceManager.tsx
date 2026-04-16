@@ -1017,12 +1017,12 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-bold text-lg text-[var(--text-main)]">{invoice.customerName || 'بێ ناو'}</h3>
                   {invoice.title && invoice.title !== 'خەرجی کارگە' && (
-                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 font-medium">
+                    <span className="text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-900/30 font-medium">
                       {invoice.title}
                     </span>
                   )}
                   {invoice.debtAmount === 0 && (
-                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                    <span className="text-[10px] bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" /> وەرگیراوە
                     </span>
                   )}
@@ -1074,7 +1074,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                   variant="secondary" 
                   size="sm" 
                   onClick={() => handleMarkAsPaid(invoice)} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30 border-green-200 dark:border-green-900/30"
                 >
                   <CheckCircle className="w-4 h-4" /> وەرگیرا
                 </Button>
@@ -1083,12 +1083,12 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                   variant="secondary" 
                   size="sm" 
                   onClick={() => handleMarkAsUnpaid(invoice)} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200"
+                  className="flex-1 flex items-center justify-center gap-2 bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-900/30"
                 >
                   <XCircle className="w-4 h-4" /> وەرنەگیرا
                 </Button>
               )}
-              <Button variant="secondary" size="sm" onClick={() => shareToWhatsApp(invoice)} className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 border-green-200">
+              <Button variant="secondary" size="sm" onClick={() => shareToWhatsApp(invoice)} className="flex-1 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/10 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20 border-green-200 dark:border-green-900/30">
                 <MessageCircle className="w-4 h-4" /> واتسئاپ
               </Button>
               <button onClick={() => onDelete(invoice.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl">

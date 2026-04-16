@@ -115,7 +115,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
             </div>
             <span className="text-sm font-bold text-[var(--text-muted)]">قازانجی پاک (ئەم مانگە)</span>
           </div>
-          <p className="text-2xl font-black text-green-600">
+          <p className="text-2xl font-black text-green-600 dark:text-green-400">
             {formatValue(monthlyData[monthlyData.length - 1].profit)}
           </p>
         </div>
@@ -127,7 +127,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
             </div>
             <span className="text-sm font-bold text-[var(--text-muted)]">کۆی ئیشی کارگە</span>
           </div>
-          <p className="text-2xl font-black text-purple-600">
+          <p className="text-2xl font-black text-purple-600 dark:text-purple-400">
             {formatValue(monthlyData[monthlyData.length - 1].revenue)}
           </p>
         </div>

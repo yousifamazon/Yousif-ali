@@ -75,10 +75,10 @@ export const FinancialManager: React.FC<Props> = ({ data, currency = 'IQD', exch
   const overallScore = Math.round((savingsRate + budgetAdherence + debtHealth) / 3);
 
   const getStatusColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-500';
-    if (score >= 60) return 'text-blue-500';
-    if (score >= 40) return 'text-amber-500';
-    return 'text-rose-500';
+    if (score >= 80) return 'text-emerald-500 dark:text-emerald-400';
+    if (score >= 60) return 'text-blue-500 dark:text-blue-400';
+    if (score >= 40) return 'text-amber-500 dark:text-amber-400';
+    return 'text-rose-500 dark:text-rose-400';
   };
 
   const getStatusBg = (score: number) => {

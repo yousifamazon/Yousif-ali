@@ -85,7 +85,7 @@ export const CustomerManager: React.FC<Props> = ({ invoices, onViewInvoice }) =>
             </div>
             <span className="text-sm font-bold text-blue-600 dark:text-blue-400">کۆی کڕیاران</span>
           </div>
-          <p className="text-3xl font-black text-blue-700 dark:text-blue-300">{customerSummaries.length}</p>
+          <p className="text-3xl font-black text-blue-700 dark:text-blue-400">{customerSummaries.length}</p>
         </div>
 
         <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-3xl border border-red-100 dark:border-red-800/30">
@@ -95,7 +95,7 @@ export const CustomerManager: React.FC<Props> = ({ invoices, onViewInvoice }) =>
             </div>
             <span className="text-sm font-bold text-red-600 dark:text-red-400">کۆی قەرزی کڕیاران</span>
           </div>
-          <p className="text-3xl font-black text-red-700 dark:text-red-300">
+          <p className="text-3xl font-black text-red-700 dark:text-red-400">
             {customerSummaries.reduce((sum, c) => sum + c.totalDebt, 0).toLocaleString()} د.ع
           </p>
         </div>
