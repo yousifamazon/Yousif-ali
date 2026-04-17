@@ -2579,16 +2579,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         <div className="space-y-4">
           <div className="flex gap-2 bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-color)] shadow-sm overflow-x-auto items-center">
             {[
-              { id: 'all', label: 'گشتی' },
-              { id: 'driver', label: 'سایەقی' },
+              { id: 'all', label: 'گشتی', isCustom: false },
+              { id: 'driver', label: 'سایەقی', isCustom: false },
               ...(category === 'personal' ? [
-                { id: 'market', label: 'مارکێت' },
-                { id: 'fuel', label: 'بەنزین' },
-                { id: 'income', label: 'داهات' },
-                { id: 'savings', label: 'پاشەکەوت' },
-                ...(data.customTabs || [])
-                  .filter(tab => !['all', 'driver', 'market', 'fuel', 'income', 'savings'].includes(tab))
-                  .map(tab => ({ id: tab, label: tab, isCustom: true }))
+                { id: 'market', label: 'مارکێت', isCustom: false },
+                { id: 'fuel', label: 'بەنزین', isCustom: false },
+                { id: 'income', label: 'داهات', isCustom: false },
+                { id: 'savings', label: 'پاشەکەوت', isCustom: false },
+                ...Array.from(new Set(data.customTabs || []))
+                  .filter((tab: string) => !['all', 'driver', 'market', 'fuel', 'income', 'savings'].includes(tab))
+                  .map((tab: string) => ({ id: tab, label: tab, isCustom: true }))
               ] : [])
             ].map(f => (
               <div key={`${f.id}-finance-filter`} className="relative group flex-shrink-0">
