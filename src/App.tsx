@@ -139,6 +139,8 @@ if (typeof crypto === 'undefined') {
   };
 }
 
+import { AIAssistant } from './components/AIAssistant';
+
 // --- Components ---
 
 export class ErrorBoundary extends React.Component<any, any> {
@@ -403,13 +405,15 @@ const FormattedNumberInput = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const englishStr = toEnglishDigits(e.target.value);
+    const isNegative = englishStr.startsWith('-');
     const rawValue = englishStr.replace(/[^\d]/g, '');
+    
     if (rawValue === '') {
-      setDisplayValue('');
+      setDisplayValue(isNegative ? '-' : '');
       onChange(0);
     } else {
-      const numValue = parseInt(rawValue, 10);
-      setDisplayValue(numValue.toLocaleString());
+      const numValue = parseInt(rawValue, 10) * (isNegative ? -1 : 1);
+      setDisplayValue((isNegative ? '-' : '') + parseInt(rawValue, 10).toLocaleString());
       onChange(numValue);
     }
   };
@@ -502,6 +506,13 @@ export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' | 'info' }[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
 
   // Removed local resizeImage implementation in favor of lib/imageUtils.ts
 
@@ -517,7 +528,7 @@ export default function App() {
         isStillScanning = false;
         setIsScanning(false);
         console.warn("handleScanReceipt: Timeout reached.");
-        alert('کاتەکەی تەواو بوو (٤٥ چرکە تێپەڕی)، تکایە وێنەیەکی ڕوونتر بگرە و دووبارە هەوڵ بدەرەوە');
+        addToast('کاتەکەی تەواو بوو (٤٥ چرکە تێپەڕی)، تکایە وێنەیەکی ڕوونتر بگرە و دووبارە هەوڵ بدەرەوە', 'error');
       }
     }, 45000);
 
@@ -555,16 +566,16 @@ export default function App() {
             unitPrice: item.unitPrice
           })) : p.receiptItems
         }));
-        alert('زانیارییەکان بە سەرکەوتوویی پڕکرانەوە');
+        addToast('زانیارییەکان بە سەرکەوتوویی پڕکرانەوە', 'success');
       } else {
-        alert('نەتوانرا زانیارییەکان بخوێنرێتەوە، تکایە دڵنیابە کە وێنەکە ڕوونە و نووسینەکان دیارن');
+        addToast('نەتوانرا زانیارییەکان بخوێنرێتەوە، تکایە دڵنیابە کە وێنەکە ڕوونە و نووسینەکان دیارن', 'error');
       }
     } catch (error) {
       if (!isStillScanning) return;
       isStillScanning = false;
       clearTimeout(timeoutId);
       console.error("Scanning failed:", error);
-      alert('هەڵەیەک ڕوویدا لە کاتی پەیوەندی بە ژیری دەستکرد');
+      addToast('هەڵەیەک ڕوویدا لە کاتی پەیوەندی بە ژیری دەستکرد', 'error');
     } finally {
       setIsScanning(false);
     }
@@ -615,14 +626,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         }
         
         await navigator.share(shareData);
-      } catch (err) {
-        console.error('Error sharing:', err);
-      }
-    } else {
-      // Fallback to clipboard
-      navigator.clipboard.writeText(text);
-      alert('زانیارییەکان کۆپی کران');
+      addToast('زانیارییەکان ڕەوانە کران', 'success');
+    } catch (err) {
+      console.error('Error sharing:', err);
     }
+  } else {
+    // Fallback to clipboard
+    navigator.clipboard.writeText(text);
+    addToast('زانیارییەکان کۆپی کران', 'success');
+  }
   };
 
   // Form States
@@ -1028,7 +1040,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   // --- Handlers ---
 
   const addTask = async () => {
+    if (isSaving) return;
     if (!newTask.title) return;
+    setIsSaving(true);
     
     const taskData = {
       title: newTask.title || '',
@@ -1089,9 +1103,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setShowTaskModal(false);
     setEditingTaskId(null);
     setNewTask(initialTaskState);
+    setIsSaving(false);
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const addTransaction = async () => {
+    if (isSaving) return;
     let finalAmount = Number(newTransaction.amount) || 0;
     
     // Auto-calculate fuel total
@@ -1153,6 +1171,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       transactionData.itemsBought = newTransaction.itemsBought;
     }
 
+    setIsSaving(true);
     if (editingTransactionId) {
       const existingTransaction = data.transactions.find(t => t.id === editingTransactionId);
       if (!existingTransaction) {
@@ -1201,6 +1220,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setShowTransactionModal(false);
     setEditingTransactionId(null);
     setNewTransaction(initialTransactionState);
+    setIsSaving(false);
     sessionStorage.removeItem('pending_transaction');
     sessionStorage.removeItem('show_transaction_modal');
   };
@@ -1322,7 +1342,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const addBudget = async () => {
-    if (!newBudget.category || !newBudget.amount) return;
+    if (isSaving || !newBudget.category || !newBudget.amount) return;
+    setIsSaving(true);
     const budget = {
       id: crypto.randomUUID(),
       ...newBudget,
@@ -1332,6 +1353,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     if (user) await syncBudgetToFirebase(budget);
     setShowBudgetModal(false);
     setNewBudget({ category: '', amount: 0, period: 'monthly' });
+    setIsSaving(false);
   };
 
   const deleteBudget = async (id: string) => {
@@ -1342,7 +1364,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const addDebt = async () => {
-    if (!newDebt.personName || !newDebt.amount) return;
+    if (isSaving || !newDebt.personName || !newDebt.amount) return;
+    setIsSaving(true);
     const debtData = {
       id: editingDebtId || crypto.randomUUID(),
       personName: newDebt.personName,
@@ -1356,6 +1379,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     await syncDebtToFirebase(debtData);
     setShowDebtModal(false);
     setNewDebt({ type: 'owed', amount: 0 });
+    setIsSaving(false);
   };
 
   const addSavingsGoal = async () => {
@@ -1439,7 +1463,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
   };
 
   const addWishlistItem = async () => {
-
+    if (isSaving || !newWishlistItem.title) return;
+    setIsSaving(true);
     const itemData = {
       title: newWishlistItem.title,
       notes: newWishlistItem.notes || '',
@@ -1489,6 +1514,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     setShowWishlistModal(false);
     setEditingWishlistId(null);
     setNewWishlistItem(initialWishlistState);
+    setIsSaving(false);
   };
 
   const toggleWishlistItem = async (id: string) => {
@@ -2005,6 +2031,43 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         >
           <Trash2 className="w-5 h-5" /> سڕینەوەی هەموو داتاکان
         </button>
+        <AIAssistant 
+          data={data} 
+          onAddTransaction={(tx) => {
+            setNewTransaction(prev => ({ ...prev, ...tx }));
+            setShowTransactionModal(true);
+            addToast('زانیارییەکان ئامادەکراون بۆ تۆمارکردن', 'info');
+          }}
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            addToast(`گوازرایەوە بۆ ${tab}`, 'info');
+          }}
+        />
+
+        {/* Global Toast Notifications */}
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] space-y-3 w-full max-w-sm px-4 pointer-events-none">
+          <AnimatePresence>
+            {toasts.map((t) => (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                className={cn(
+                  "p-4 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-xl pointer-events-auto",
+                  t.type === 'success' ? "bg-emerald-500/90 text-white border-emerald-400" :
+                  t.type === 'error' ? "bg-rose-500/90 text-white border-rose-400" :
+                  "bg-blue-600/90 text-white border-blue-400"
+                )}
+              >
+                {t.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : 
+                 t.type === 'error' ? <AlertCircle className="w-5 h-5" /> : 
+                 <Sparkles className="w-5 h-5" />}
+                <span className="font-black text-sm">{t.message}</span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
@@ -2732,7 +2795,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <button onClick={() => setNewBudget(p => ({ ...p, period: 'daily' }))} className={cn("flex-1 py-3 rounded-xl font-bold transition-all", newBudget.period === 'daily' ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" : "text-[var(--text-muted)]")}>ڕۆژانە</button>
                   </div>
                 </div>
-                <Button onClick={addBudget} className="w-full py-4 text-lg" disabled={!newBudget.category || !newBudget.amount}>
+                <Button 
+                  onClick={addBudget} 
+                  className="w-full py-4 text-lg flex items-center justify-center gap-2" 
+                  disabled={isSaving || !newBudget.category || !newBudget.amount}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
                   تۆمارکردن
                 </Button>
               </div>
@@ -2921,7 +2989,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     </select>
                   </div>
                 </div>
-                <Button className="w-full py-5 rounded-3xl text-lg" onClick={addTask}>تۆمارکردنی ئیش</Button>
+                <Button 
+                  className="w-full py-5 rounded-3xl text-lg flex items-center justify-center gap-2" 
+                  onClick={addTask}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : null}
+                  تۆمارکردنی ئیش
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -3408,7 +3483,14 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   )}
                 </div>
 
-                <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={addTransaction}>تۆمارکردن</Button>
+                <Button 
+                  onClick={addTransaction} 
+                  className="w-full py-5 rounded-3xl text-lg flex items-center justify-center gap-2"
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : null}
+                  {editingTransactionId ? 'نوێکردنەوەی تۆمار' : 'تۆمارکردن'}
+                </Button>
               </div>
             </motion.div>
           </div>
