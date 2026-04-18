@@ -19,7 +19,7 @@ import {
   PolarRadiusAxis,
   Radar
 } from 'recharts';
-import { MaintenanceInvoice, Transaction, Debt } from '../types';
+import { MaintenanceInvoice, Transaction, Debt, SavingsGoal } from '../types';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -33,6 +33,8 @@ import {
   Zap, 
   ShieldCheck,
   ArrowUpRight,
+  Plus,
+  Vault,
   Calendar,
   DollarSign
 } from 'lucide-react';
@@ -44,11 +46,21 @@ interface Props {
   invoices: MaintenanceInvoice[];
   transactions: Transaction[];
   debts: Debt[];
+  savingsGoals: SavingsGoal[];
   currency?: 'IQD' | 'USD';
   exchangeRate?: number;
+  onAction?: (type: 'income' | 'expense' | 'savings') => void;
 }
 
-export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, debts, currency = 'IQD', exchangeRate = 1500 }) => {
+export const FinancialDashboard: React.FC<Props> = ({ 
+  invoices, 
+  transactions, 
+  debts, 
+  savingsGoals,
+  currency = 'IQD', 
+  exchangeRate = 1500,
+  onAction
+}) => {
   const formatValue = (amount: number) => {
     if (currency === 'USD') {
       return `$${(amount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -104,6 +116,8 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
     healthScore -= Math.min(25, debtRatio / 2);
     healthScore = Math.max(0, Math.min(100, healthScore));
 
+    const totalSavings = savingsGoals.reduce((acc, goal) => acc + (goal.currentAmount || 0), 0);
+
     return {
       income,
       expense,
@@ -113,11 +127,12 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
       healthScore,
       savingsRate,
       totalCash: income - expense,
+      totalSavings,
       totalOwedToMe: invoices.reduce((sum, inv) => sum + (inv.debtAmount || 0), 0) + 
                      debts.filter(d => d.type === 'owing' && !d.completed).reduce((sum, d) => sum + d.amount, 0),
       totalIOwe: debts.filter(d => d.type === 'owed' && !d.completed).reduce((sum, d) => sum + d.amount, 0)
     };
-  }, [invoices, transactions, debts]);
+  }, [invoices, transactions, debts, savingsGoals]);
 
   // Chart data: Last 14 days for better trend
   const chartData = useMemo(() => {
@@ -147,52 +162,90 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
   const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }: any) => (
     <motion.div 
       whileHover={{ y: -5, scale: 1.02 }}
-      className="bg-[var(--bg-card)] p-6 rounded-[32px] border border-[var(--border-color)] shadow-sm relative overflow-hidden group"
+      className="bg-[var(--bg-card)] p-7 rounded-[32px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all relative overflow-hidden group"
     >
       <div className={cn("absolute top-0 right-0 w-24 h-24 opacity-5 -mr-8 -mt-8 rounded-full transition-transform group-hover:scale-150", color)} />
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <div className={cn("p-3 rounded-2xl shadow-lg", color)}>
+      <div className="flex justify-between items-start mb-5 relative z-10">
+        <div className={cn("p-4 rounded-2xl shadow-lg", color)}>
           <Icon className="w-6 h-6 text-white" />
         </div>
         {trend !== undefined && (
-          <div className={cn("flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg", trend <= 0 ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400")}>
+          <div className={cn("flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full", trend <= 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30" : "bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30")}>
             {trend <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
             {Math.abs(Math.round(trend))}%
           </div>
         )}
       </div>
-      <h3 className="text-[var(--text-muted)] text-sm font-bold mb-1 relative z-10">{title}</h3>
-      <p className="text-2xl font-black text-[var(--text-main)] relative z-10">{formatValue(value)}</p>
-      {subtitle && <p className="text-[10px] font-bold text-[var(--text-muted)] mt-1">{subtitle}</p>}
+      <h3 className="text-[var(--text-muted)] text-xs font-black uppercase tracking-wider mb-2 relative z-10">{title}</h3>
+      <p className="text-2xl font-black text-[var(--text-main)] relative z-10 tracking-tight">{formatValue(value)}</p>
+      {subtitle && <p className="text-[10px] font-bold text-[var(--text-muted)] mt-2 opacity-60 uppercase">{subtitle}</p>}
     </motion.div>
   );
 
   return (
-    <div className="space-y-8">
-      {/* Premium Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-8 bg-blue-600 rounded-full" />
-            <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight">
-              کۆنترۆڵی دارایی
-            </h1>
+    <div className="space-y-10">
+      {/* Inspired by Mockup: Large Unified Balance Card */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative bg-gradient-to-br from-blue-600 to-blue-700 rounded-[40px] p-8 text-white shadow-2xl shadow-blue-500/30 overflow-hidden min-h-[340px] flex flex-col justify-between"
+      >
+        {/* Abstract Background element */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full blur-2xl -ml-20 -mb-20 pointer-events-none" />
+
+        <div className="relative z-10">
+          <p className="text-blue-100 text-sm font-black text-right mb-2 tracking-wide uppercase opacity-90">کۆی گشتی باڵانس</p>
+          <div className="flex flex-row-reverse items-baseline gap-3">
+             <h2 className="text-5xl font-black tracking-tighter leading-none">
+              {stats.totalCash.toLocaleString()}
+            </h2>
+            <span className="text-xl font-bold text-blue-100">د.ع</span>
           </div>
-          <p className="text-[var(--text-muted)] font-bold text-lg">بەخێربێیتەوە، یوسف. لێرە هەموو شتێک لەژێر چاودێریدایە.</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="bg-blue-600 p-4 rounded-[32px] text-white shadow-xl shadow-blue-200 dark:shadow-none flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Wallet className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-blue-100 uppercase">کۆی باڵانس</p>
-              <p className="text-xl font-black">{formatValue(stats.totalCash)}</p>
+        <div className="relative z-10 mt-auto flex flex-col items-end gap-6">
+          {/* Savings Box */}
+          <div className="bg-blue-800/40 backdrop-blur-xl border border-white/10 p-5 rounded-[32px] min-w-[200px] text-right">
+            <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">کۆی پاشەکەوت</p>
+            <div className="flex flex-row-reverse items-baseline gap-2">
+              <p className="text-2xl font-black tracking-tight">{stats.totalSavings.toLocaleString()}</p>
+              <span className="text-xs font-bold text-blue-200">د.ع</span>
             </div>
           </div>
+
+          {/* Action Row Cluster */}
+          <div className="flex flex-wrap flex-row-reverse gap-3">
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onAction?.('income')}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 px-5 py-3 rounded-2xl font-black text-sm transition-all"
+            >
+              <span>داهات</span>
+              <Plus className="w-4 h-4" />
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onAction?.('expense')}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 px-5 py-3 rounded-2xl font-black text-sm transition-all"
+            >
+              <span>خەرجی</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onAction?.('savings')}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 px-5 py-3 rounded-2xl font-black text-sm transition-all"
+            >
+              <span>هەلكرتن</span>
+              <Vault className="w-4 h-4" />
+            </motion.button>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -52,7 +52,10 @@ import {
   Zap as ZapIcon,
   FileText,
   Package,
-  Settings
+  Settings,
+  FileSpreadsheet,
+  FileDown,
+  Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarcodeScanner } from './components/BarcodeScanner';
@@ -438,6 +441,19 @@ export default function App() {
   const [isMigrating, setIsMigrating] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'personal' | 'maintenance' | 'wishlist' | 'debts' | 'savings' | 'customers' | 'reports' | 'ai_chat' | 'settings'>('dashboard');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const healthScore = useMemo(() => {
     const todaySpent = (data.transactions || [])
@@ -1820,36 +1836,47 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     return (
       <div className="space-y-10 pb-24">
-        {/* Quick Actions */}
+        <FinancialDashboard 
+          invoices={data.maintenanceInvoices || []} 
+          transactions={data.transactions || []} 
+          debts={data.debts || []} 
+          savingsGoals={data.savingsGoals || []}
+          currency={currency}
+          exchangeRate={exchangeRate}
+          onAction={(type) => {
+            if (type === 'income' || type === 'expense') {
+              setNewTransaction({ ...initialTransactionState, type, category: 'personal' });
+              setShowTransactionModal(true);
+            } else if (type === 'savings') {
+              // Open transaction with savings type as requested
+              setNewTransaction({ ...initialTransactionState, type: 'savings', category: 'personal' });
+              setShowTransactionModal(true);
+            }
+          }}
+        />
+
+        {/* Secondary Actions Row - Simplified and integrated below major overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'خەرجی نوێ', icon: Plus, color: 'bg-blue-600', onClick: () => { setNewTransaction(p => ({ ...p, type: 'expense' })); setShowTransactionModal(true); } },
-            { label: 'داهاتی نوێ', icon: TrendingUp, color: 'bg-emerald-600', onClick: () => { setNewTransaction(p => ({ ...p, type: 'income' })); setShowTransactionModal(true); } },
-            { label: 'قەرزی نوێ', icon: CreditCard, color: 'bg-amber-600', onClick: () => setShowDebtModal(true) },
-            { label: 'ئاواتی نوێ', icon: Sparkles, color: 'bg-purple-600', onClick: () => setShowWishlistModal(true) },
+            { label: 'قەرزی نوێ', icon: CreditCard, color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20', shadow: 'shadow-amber-100', onClick: () => setShowDebtModal(true) },
+            { label: 'ئاواتی نوێ', icon: Sparkles, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20', shadow: 'shadow-purple-100', onClick: () => setShowWishlistModal(true) },
+            { label: 'بودجەی نوێ', icon: Wallet, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20', shadow: 'shadow-indigo-100', onClick: () => setShowBudgetModal(true) },
+            { label: 'بۆردی کار', icon: Calendar, color: 'text-slate-600 bg-slate-50 dark:bg-slate-900/20', shadow: 'shadow-slate-100', onClick: () => setActiveTab('tasks') },
           ].map((action, i) => (
             <motion.button
               key={i}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={action.onClick}
-              className={cn("p-4 rounded-3xl flex flex-col items-center gap-3 text-white shadow-lg transition-all", action.color)}
+              className={cn("p-4 rounded-3xl flex flex-col items-center gap-3 shadow-md transition-all border border-transparent hover:border-current/10 bg-white dark:bg-[var(--bg-card)]", action.shadow)}
             >
-              <div className="p-2 bg-white/20 rounded-xl">
-                <action.icon className="w-6 h-6" />
+              <div className={cn("p-3 rounded-2xl shadow-sm", action.color)}>
+                <action.icon className="w-5 h-5" />
               </div>
-              <span className="font-black text-sm">{action.label}</span>
+              <span className="font-black text-xs text-[var(--text-main)]">{action.label}</span>
             </motion.button>
           ))}
         </div>
-
-        <FinancialDashboard 
-          invoices={data.maintenanceInvoices || []} 
-          transactions={data.transactions || []} 
-          debts={data.debts || []} 
-          currency={currency}
-          exchangeRate={exchangeRate}
-        />
 
         {/* Budgets Section */}
         <div className="space-y-6">
@@ -1956,47 +1983,27 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </div>
         )}
 
-        {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Button variant="accent" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => {
-          setNewTransaction({ ...initialTransactionState, type: 'income', category: 'personal' });
-          setShowTransactionModal(true);
-        }}>
-          <Plus className="w-6 h-6" />
-          <span>داهات</span>
-        </Button>
-        <Button variant="danger" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => {
-          setNewTransaction({ ...initialTransactionState, type: 'expense', category: 'personal' });
-          setShowTransactionModal(true);
-        }}>
-          <ArrowUpRight className="w-6 h-6" />
-          <span>خەرجی</span>
-        </Button>
-        <Button variant="secondary" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => setActiveTab('maintenance')}>
-          <FileText className="w-6 h-6" />
-          <span>وەسڵ</span>
-        </Button>
-      </div>
 
-      {/* Export Actions */}
-      <div className="grid grid-cols-3 gap-3 no-print">
-        <button onClick={exportToExcel} className="flex items-center justify-center gap-2 p-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all active:scale-95">
-          <Briefcase className="w-5 h-5" /> Excel
+
+      {/* Export & Administrative Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 no-print">
+        <button onClick={exportToExcel} className="flex items-center justify-center gap-3 p-5 bg-emerald-600 text-white rounded-[30px] font-black shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95">
+          <FileSpreadsheet className="w-6 h-6" /> ڕەوانەکردنی Excel
         </button>
-        <button onClick={exportToPDF} className="flex items-center justify-center gap-2 p-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all active:scale-95">
-          <AlertCircle className="w-5 h-5" /> PDF
+        <button onClick={exportToPDF} className="flex items-center justify-center gap-3 p-5 bg-rose-600 text-white rounded-[30px] font-black shadow-lg shadow-rose-500/20 hover:bg-rose-700 transition-all hover:scale-105 active:scale-95">
+          <FileDown className="w-6 h-6" /> داگرتنی PDF
         </button>
-        <button onClick={handlePrint} className="flex items-center justify-center gap-2 p-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-900 transition-all active:scale-95">
-          <Clock className="w-5 h-5" /> Print
+        <button onClick={handlePrint} className="flex items-center justify-center gap-3 p-5 bg-slate-800 text-white rounded-[30px] font-black shadow-lg hover:bg-slate-900 transition-all hover:scale-105 active:scale-95">
+          <Printer className="w-6 h-6" /> چاپکردنی ڕاپۆرت
         </button>
       </div>
 
-      <div className="flex justify-center mb-10 no-print">
+      <div className="flex justify-center pt-8 no-print">
         <button 
           onClick={() => setShowResetModal(true)} 
-          className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-all active:scale-95"
+          className="flex items-center gap-2 px-8 py-4 bg-red-50 text-red-600 rounded-full font-black hover:bg-red-100 transition-all border border-red-100 active:scale-95"
         >
-          <Trash2 className="w-4 h-4" /> سڕینەوەی هەموو داتاکان
+          <Trash2 className="w-5 h-5" /> سڕینەوەی هەموو داتاکان
         </button>
       </div>
     </div>
@@ -2486,9 +2493,16 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 >
                   رۆژانەی یوسف
                 </motion.h1>
-                <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest">PRO</div>
+                <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-md">PRO</div>
+                <div className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-all border",
+                  isOnline ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30" : "bg-red-50 text-red-600 border-red-100 dark:bg-red-900/10 dark:border-red-900/30"
+                )}>
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                  {isOnline ? 'لەسەر هێڵ' : 'دەرەوەی هێڵ'}
+                </div>
               </div>
-              <p className="text-[var(--text-muted)] font-bold mt-1">بەڕێوەبردنی کار و دارایی</p>
+              <p className="text-[var(--text-muted)] font-bold mt-1.5 opacity-80">بەڕێوەبردنی کار و دارایی فەرمی</p>
             </div>
           </div>
 
