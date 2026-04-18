@@ -182,22 +182,6 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="bg-[var(--bg-card)] p-4 rounded-[32px] border border-[var(--border-color)] shadow-sm flex items-center gap-4">
-            <div className="relative w-16 h-16">
-              <svg className="w-full h-full" viewBox="0 0 36 36">
-                <path className="text-slate-200 dark:text-slate-800" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-                <path className="text-blue-600" strokeDasharray={`${stats.healthScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-sm font-black">{Math.round(stats.healthScore)}</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-[var(--text-muted)] uppercase">نمرەی دارایی</p>
-              <p className="font-black text-[var(--text-main)]">تەندروستی باش</p>
-            </div>
-          </div>
-
           <div className="bg-blue-600 p-4 rounded-[32px] text-white shadow-xl shadow-blue-200 dark:shadow-none flex items-center gap-4">
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
               <Wallet className="w-6 h-6" />
@@ -246,7 +230,7 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
       {/* Advanced Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Trend Chart */}
-        <div className="lg:col-span-2 bg-[var(--bg-card)] p-8 rounded-[40px] border border-[var(--border-color)] shadow-sm">
+        <div className="lg:col-span-3 bg-[var(--bg-card)] p-8 rounded-[40px] border border-[var(--border-color)] shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
             <div>
               <h3 className="text-xl font-black text-[var(--text-main)]">ڕەوتی دارایی</h3>
@@ -320,97 +304,6 @@ export const FinancialDashboard: React.FC<Props> = ({ invoices, transactions, de
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Category Breakdown & Insights */}
-        <div className="space-y-8">
-          <div className="bg-[var(--bg-card)] p-8 rounded-[40px] border border-[var(--border-color)] shadow-sm">
-            <h3 className="text-xl font-black text-[var(--text-main)] mb-6">زۆرترین خەرجی</h3>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={8}
-                    dataKey="value"
-                  >
-                    {stats.categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-3 mt-6">
-              {stats.categoryData.map((cat, idx) => (
-                <div key={cat.name} className="flex justify-between items-center group cursor-default">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                    <span className="text-sm font-bold text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors">{cat.name}</span>
-                  </div>
-                  <span className="text-sm font-black text-[var(--text-main)]">{formatValue(cat.value)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Smart Insights Card */}
-          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[40px] text-white shadow-xl relative overflow-hidden">
-            <Zap className="absolute top-4 right-4 w-24 h-24 text-white/10 -mr-8 -mt-8" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <ShieldCheck className="w-5 h-5" />
-                <span className="text-xs font-black uppercase tracking-wider">ڕاوێژکاری زیرەک</span>
-              </div>
-              <h4 className="text-xl font-black mb-2">ڕێژەی پاشەکەوت: {Math.round(stats.savingsRate)}%</h4>
-              <p className="text-sm font-medium text-blue-100 leading-relaxed">
-                {stats.savingsRate > 20 
-                  ? "ئاستی پاشەکەوتت زۆر باشە! بەردەوام بە لەسەر ئەم ڕەوتە بۆ گەیشتن بە ئامانجەکانت."
-                  : "هەوڵ بدە خەرجییە ناپێویستەکان کەم بکەیتەوە بۆ ئەوەی ڕێژەی پاشەکەوتت بەرز بکەیتەوە."}
-              </p>
-              <button className="mt-6 w-full py-3 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2">
-                بینینی ڕاپۆرتی ورد <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Financial Health Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-emerald-50 dark:bg-emerald-900/10 p-6 rounded-[32px] border border-emerald-100 dark:border-emerald-900/20 flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center shrink-0">
-            <Target className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">داهاتی گشتی</p>
-            <p className="text-lg font-black text-emerald-900 dark:text-emerald-100">{formatValue(stats.income)}</p>
-          </div>
-        </div>
-
-        <div className="bg-rose-50 dark:bg-rose-900/10 p-6 rounded-[32px] border border-rose-100 dark:border-rose-900/20 flex items-center gap-4">
-          <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center shrink-0">
-            <TrendingDown className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase">خەرجی گشتی</p>
-            <p className="text-lg font-black text-rose-900 dark:text-rose-100">{formatValue(stats.expense)}</p>
-          </div>
-        </div>
-
-        <div className="bg-sky-50 dark:bg-sky-900/10 p-6 rounded-[32px] border border-sky-100 dark:border-sky-900/20 flex items-center gap-4">
-          <div className="w-12 h-12 bg-sky-100 dark:bg-sky-900/30 rounded-2xl flex items-center justify-center shrink-0">
-            <Calendar className="w-6 h-6 text-sky-600 dark:text-sky-400" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase">خەرجی ڕۆژانە (تێکڕا)</p>
-            <p className="text-lg font-black text-sky-900 dark:text-sky-100">{formatValue(Math.round(stats.expense / 30))}</p>
           </div>
         </div>
       </div>

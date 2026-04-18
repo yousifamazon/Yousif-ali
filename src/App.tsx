@@ -20,7 +20,6 @@ import {
   Calendar,
   Clock,
   Activity,
-  BrainCircuit,
   Globe,
   ChevronRight,
   ChevronDown,
@@ -50,22 +49,15 @@ import {
   Menu,
   X,
   ArrowDownToLine,
-  Mic,
-  MicOff,
-  Lightbulb,
   Zap as ZapIcon,
   FileText,
   Package,
-  MessageSquare,
-  Settings,
-  MessageCircle
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarcodeScanner } from './components/BarcodeScanner';
 import { ReceiptScanner } from './components/ReceiptScanner';
 import { scanReceipt } from './services/geminiService';
-import { getFinancialInsights, AIInsight } from './services/aiAdvisorService';
-import { parseVoiceCommand, parseVoiceCommandAudio, VoiceAction } from './services/voiceCommandService';
 import { resizeImage } from './lib/imageUtils';
 import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isPast } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -88,7 +80,6 @@ import { MaintenanceInvoiceManager } from './components/MaintenanceInvoiceManage
 import { CustomerManager } from './components/CustomerManager';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { InventoryManager } from './components/InventoryManager';
-import { SmartAssistant } from './components/SmartAssistant';
 import { 
   getStoredData, 
   saveToStorage, 
@@ -113,7 +104,6 @@ import {
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { FinancialDashboard } from './components/FinancialDashboard';
-import { FinancialManager } from './components/FinancialManager';
 import { 
   auth, 
   loginWithGoogle, 
@@ -210,230 +200,6 @@ const parseFirestoreError = (err: any): string => {
     errorMessage += '\n\nوردەکاری: ' + err.message.substring(0, 150);
   }
   return errorMessage;
-};
-
-const VoiceCommandModal = ({ 
-  isOpen, 
-  onClose, 
-  onCommand, 
-  onAudioCommand,
-  isListening, 
-  setIsListening, 
-  message,
-  setVoiceMessage
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onCommand: (text: string) => void;
-  onAudioCommand?: (audioBase64: string, mimeType: string) => void;
-  isListening: boolean;
-  setIsListening: (val: boolean) => void;
-  message: string | null;
-  setVoiceMessage: (msg: string | null) => void;
-}) => {
-  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
-  const audioChunksRef = React.useRef<Blob[]>([]);
-
-  useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-      }
-    };
-  }, []);
-
-  const startListening = async () => {
-    try {
-      // Check if we can use native speech recognition first for better UX
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'ku-IQ'; // Try Kurdish, though browser support varies
-        recognition.continuous = false;
-        recognition.interimResults = false;
-
-        recognition.onstart = () => {
-          setIsListening(true);
-          setVoiceMessage("گوێم لێیە، قسە بکە...");
-        };
-
-        recognition.onresult = (event: any) => {
-          const text = event.results[0][0].transcript;
-          onCommand(text);
-          setIsListening(false);
-        };
-
-        recognition.onerror = (event: any) => {
-          console.error("Speech recognition error:", event.error);
-          // Fallback to audio recording if native fails
-          startAudioRecording();
-        };
-
-        recognition.start();
-      } else {
-        startAudioRecording();
-      }
-    } catch (error) {
-      startAudioRecording();
-    }
-  };
-
-  const startAudioRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-          // Extract base64 part
-          const base64 = base64data.split(',')[1];
-          if (onAudioCommand) {
-            onAudioCommand(base64, mediaRecorder.mimeType);
-          }
-        };
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsListening(true);
-      setVoiceMessage("گوێم لێیە، قسە بکە...");
-    } catch (error: any) {
-      console.error("Error accessing microphone:", error);
-      if (error.name === 'NotAllowedError' || error.message?.includes('Permission denied')) {
-        setVoiceMessage("ڕێگە نەدرا بە مایکڕۆفۆن. تکایە ڕێگە بە مایکڕۆفۆن بدە، یان ئەپەکە لە تابێکی نوێدا بکەرەوە (Open in new tab).");
-      } else {
-        setVoiceMessage("کێشەیەک هەیە لە کردنەوەی مایکڕۆفۆن. دڵنیابە کە مایکڕۆفۆنەکەت کار دەکات.");
-      }
-      setIsListening(false);
-    }
-  };
-
-  const stopListening = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsListening(false);
-    setVoiceMessage("خەریکی لێکدانەوەی دەنگەکەم...");
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-lg bg-[var(--bg-card)] rounded-[40px] p-8 shadow-2xl border border-[var(--border-color)] overflow-hidden"
-          >
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-            
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="relative">
-                <div className={cn(
-                  "w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500",
-                  isListening ? "bg-red-500 animate-pulse scale-110 shadow-[0_0_40px_rgba(239,68,68,0.5)]" : "bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)]"
-                )}>
-                  {isListening ? <Mic className="w-10 h-10 text-white" /> : <MicOff className="w-10 h-10 text-white" />}
-                </div>
-                {isListening && (
-                  <motion.div 
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute inset-0 rounded-full border-4 border-red-500"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-2xl font-black text-[var(--text-main)]">فەرمانی دەنگی</h2>
-                <p className="text-[var(--text-muted)] font-bold">بڵێ "٥٠٠٠ بۆ نانی بەیانی" یان "ئیشی چاکردنەوەی کارەبا زیاد بکە"</p>
-              </div>
-
-              <div className="w-full bg-[var(--bg-main)] p-6 rounded-3xl min-h-[100px] flex items-center justify-center border border-[var(--border-color)]">
-                {message ? (
-                  <p className="text-lg font-bold text-[var(--text-main)]">{message}</p>
-                ) : (
-                  <p className="text-[var(--text-muted)] italic">چاوەڕێی دەنگتم...</p>
-                )}
-              </div>
-
-              <div className="flex gap-4 w-full">
-                <Button 
-                  variant={isListening ? 'danger' : 'primary'} 
-                  className="flex-1 py-6 rounded-3xl text-lg"
-                  onClick={isListening ? stopListening : startListening}
-                >
-                  {isListening ? 'بوەستە' : 'دەستپێ بکە'}
-                </Button>
-                <Button variant="secondary" className="px-8 rounded-3xl" onClick={onClose}>داخستن</Button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-export const SpeechToTextButton = ({ onResult, className }: { onResult: (text: string) => void; className?: string }) => {
-  const [isListening, setIsListening] = useState(false);
-
-  const startListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("ببورە، وەرگرتنی دەنگ لەم وێبگەڕەدا پشتگیری ناکرێت.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'ku-IQ';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-    recognition.onresult = (event: any) => {
-      const text = event.results[0][0].transcript;
-      onResult(text);
-    };
-    recognition.onerror = () => setIsListening(false);
-
-    recognition.start();
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={startListening}
-      className={cn(
-        "p-2 rounded-xl transition-all",
-        isListening ? "bg-red-500 text-white animate-pulse" : "bg-blue-50 text-blue-600 hover:bg-blue-100",
-        className
-      )}
-    >
-      {isListening ? <Mic className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-    </button>
-  );
 };
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void; key?: string | number }) => (
@@ -693,96 +459,6 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // AI Insights Effect
-  useEffect(() => {
-    const fetchInsights = async () => {
-      if ((data.transactions?.length || 0) > 0 || (data.debts?.length || 0) > 0) {
-        setIsAnalyzing(true);
-        const insights = await getFinancialInsights(data);
-        if (insights.length > 0) {
-          setAiInsights(insights);
-        }
-        setIsAnalyzing(false);
-      }
-    };
-
-    // Fetch on load and then every 30 minutes
-    fetchInsights();
-    const interval = setInterval(fetchInsights, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [data.transactions?.length, data.debts?.length]);
-
-  const handleVoiceCommand = async (text: string) => {
-    setVoiceMessage("خەریکی لێکدانەوەی فەرمانەکەم...");
-    const result = await parseVoiceCommand(text);
-    processVoiceResult(result);
-  };
-
-  const handleVoiceCommandAudio = async (audioBase64: string, mimeType: string) => {
-    setVoiceMessage("خەریکی لێکدانەوەی دەنگەکەم...");
-    const result = await parseVoiceCommandAudio(audioBase64, mimeType);
-    processVoiceResult(result);
-  };
-
-  const processVoiceResult = (result: VoiceAction) => {
-    setVoiceMessage(result.message);
-
-    if (result.type === 'ADD_TRANSACTION') {
-      const newT: Transaction = {
-        id: crypto.randomUUID(),
-        amount: result.data.amount || 0,
-        description: result.data.description || '',
-        type: result.data.type || 'expense',
-        category: result.data.category || 'گشتی',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        receiptItems: []
-      };
-      setData(prev => ({
-        ...prev,
-        transactions: [newT, ...prev.transactions]
-      }));
-      syncTransactionToFirebase(newT);
-    } else if (result.type === 'ADD_TASK') {
-      const newT: Task = {
-        id: crypto.randomUUID(),
-        title: result.data.title || '',
-        description: '',
-        details: result.data.details || [{ subject: '', work: '' }],
-        date: format(new Date(), 'yyyy-MM-dd'),
-        completed: false,
-        priority: 'medium',
-        category: 'personal',
-        workTypes: result.data.workTypes || []
-      };
-      setData(prev => ({
-        ...prev,
-        tasks: [newT, ...prev.tasks]
-      }));
-      syncTaskToFirebase(newT);
-    } else if (result.type === 'ADD_DEBT') {
-      const newD: Debt = {
-        id: crypto.randomUUID(),
-        personName: result.data.personName || '',
-        amount: result.data.amount || 0,
-        type: result.data.type || 'owed',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        notes: result.data.notes || '',
-        completed: false
-      };
-      setData(prev => ({
-        ...prev,
-        debts: [newD, ...(prev.debts || [])]
-      }));
-      if (user) {
-        setDoc(doc(db, `users/${user.uid}/debts/${newD.id}`), newD)
-          .catch(err => handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/debts/${newD.id}`));
-      }
-    } else if (result.type === 'UNKNOWN' && result.data && (result.data as any).query) {
-      // Handle searchInvoices which returns UNKNOWN type but has query in data
-      setActiveTab('maintenance');
-      setInvoiceSearchQuery((result.data as any).query || (result.data as any).date || '');
-    }
-  };
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
@@ -799,12 +475,6 @@ export default function App() {
   const [newCustomTabName, setNewCustomTabName] = useState('');
   const [newProduct, setNewProduct] = useState<{ name: string, price: number, quantity: number }>({ name: '', price: 0, quantity: 1 });
   
-  // AI & Voice State
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [voiceMessage, setVoiceMessage] = useState<string | null>(null);
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [quickAddAmounts, setQuickAddAmounts] = useState<Record<string, number>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -2150,43 +1820,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     return (
       <div className="space-y-10 pb-24">
-        {/* Daily Limit Tracker */}
-        {dailyLimit > 0 && (
-          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-3xl" />
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="text-center md:text-right">
-                <p className="text-slate-400 text-sm font-bold mb-1">خەرجی ڕێگەپێدراوی ئەمڕۆ</p>
-                <h3 className="text-4xl font-black">{formatCurrency(dailyLimit)}</h3>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="relative w-24 h-24">
-                  <svg className="w-full h-full" viewBox="0 0 36 36">
-                    <path className="text-slate-700" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-                    <path className={cn(remainingToday < 0 ? "text-red-500" : "text-blue-500")} strokeDasharray={`${Math.min(100, (todaySpent / dailyLimit) * 100)}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className="text-xs font-black">{Math.round((todaySpent / dailyLimit) * 100)}%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center md:text-left">
-                <p className="text-slate-400 text-sm font-bold mb-1">ماوە بۆ ئەمڕۆ</p>
-                <h3 className={cn("text-3xl font-black", remainingToday < 0 ? "text-red-400" : "text-green-400")}>
-                  {formatCurrency(Math.abs(remainingToday))}
-                  {remainingToday < 0 && <span className="text-xs block mt-1">زیادەڕۆیی کراوە!</span>}
-                </h3>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        <FinancialManager 
-          data={data} 
-          currency={currency}
-          exchangeRate={exchangeRate}
-        />
-
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -2323,55 +1956,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </div>
         )}
 
-        {/* AI Insights Section */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
-            <BrainCircuit className="w-7 h-7 text-purple-500" />
-            ڕاوێژکاری ژیری دەستکرد
-          </h2>
-          {isAnalyzing && <Loader2 className="w-5 h-5 animate-spin text-purple-500" />}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {aiInsights.length > 0 ? (
-            aiInsights.map((insight, idx) => (
-              <Card key={`ai-insight-${idx}`} className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
-                <div className="flex items-start gap-4">
-                  <div className={cn(
-                    "p-3 rounded-2xl",
-                    insight.type === 'saving' ? "bg-green-100 text-green-600" :
-                    insight.type === 'spending' ? "bg-red-100 text-red-600" :
-                    insight.type === 'debt' ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
-                  )}>
-                    <Lightbulb className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-[var(--text-main)] mb-1">{insight.title}</h4>
-                    <p className="text-sm text-[var(--text-muted)] font-bold leading-relaxed">{insight.content}</p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase",
-                        insight.priority === 'high' ? "bg-red-100 text-red-600" :
-                        insight.priority === 'medium' ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600"
-                      )}>
-                        {insight.priority === 'high' ? 'گرنگ' : insight.priority === 'medium' ? 'ناوەند' : 'ئاسایی'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full p-16 bg-[var(--bg-card)] rounded-[40px] border border-dashed border-[var(--border-color)] text-center">
-              <BrainCircuit className="w-16 h-16 text-[var(--text-muted)] mx-auto mb-4 opacity-10" />
-              <p className="text-[var(--text-muted)] font-bold">خەریکی کۆکردنەوەی زانیارییەکانم بۆ پێدانی ئامۆژگاری...</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Actions */}
+        {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Button variant="accent" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => {
           setNewTransaction({ ...initialTransactionState, type: 'income', category: 'personal' });
@@ -2390,10 +1975,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         <Button variant="secondary" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => setActiveTab('maintenance')}>
           <FileText className="w-6 h-6" />
           <span>وەسڵ</span>
-        </Button>
-        <Button variant="secondary" className="h-24 rounded-[32px] flex-col gap-1" onClick={() => setShowVoiceModal(true)}>
-          <Mic className="w-6 h-6 text-blue-600" />
-          <span>دەنگ</span>
         </Button>
       </div>
 
@@ -2486,7 +2067,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
                         <div className="mt-2 space-y-1">
                           {(task.details || []).map((d, i) => (
-                            <div key={d.id || i} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                            <div key={d.id || `task-detail-${i}`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
                               <p className="text-xs font-black text-[var(--text-muted)]">{d.subject}</p>
                               <p className="text-xs text-[var(--text-muted)] mt-0.5">{d.work}</p>
                             </div>
@@ -2770,7 +2351,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.receiptItems && t.receiptItems.length > 0 && (
                           <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={item.id || i} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
+                              <div key={item.id || `preview-item-${i}`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
                                 <span>{item.name}</span>
                                 <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
@@ -2906,16 +2487,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   رۆژانەی یوسف
                 </motion.h1>
                 <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest">PRO</div>
-                <div className={cn(
-                  "px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-1",
-                  healthScore >= 80 ? "bg-emerald-100 text-emerald-600" : 
-                  healthScore >= 50 ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"
-                )}>
-                  <Activity className="w-3 h-3" />
-                  تەندروستی: {healthScore}%
-                </div>
               </div>
-              <p className="text-[var(--text-muted)] font-bold mt-1">بەڕێوەبردنی زیرەکانەی کار و دارایی</p>
+              <p className="text-[var(--text-muted)] font-bold mt-1">بەڕێوەبردنی کار و دارایی</p>
             </div>
           </div>
 
@@ -2996,7 +2569,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'maintenance', label: 'وەسڵی سیانە', icon: FileText },
                     { id: 'customers', label: 'کڕیاران', icon: User },
                     { id: 'reports', label: 'ڕاپۆرتەکان', icon: TrendingUp },
-                    { id: 'ai_chat', label: 'یاریدەدەری زیرەک', icon: BrainCircuit },
                     { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
                     { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
                     { id: 'savings', label: 'پاشەکەوت', icon: Vault },
@@ -3054,9 +2626,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   currency={currency}
                   exchangeRate={exchangeRate}
                 />
-              )}
-              {activeTab === 'ai_chat' && (
-                <SmartAssistant data={data} />
               )}
               {activeTab === 'wishlist' && renderWishlist()}
               {activeTab === 'debts' && renderDebts()}
@@ -3265,7 +2834,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   
                   <div className="space-y-3">
                     {(newTask.details || [{ id: crypto.randomUUID(), subject: '', work: '' }]).map((detail, idx) => (
-                      <div key={detail.id || idx} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
+                      <div key={detail.id || `modal-detail-${idx}`} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
                         <div className="col-span-5 space-y-1">
                           <label className="text-[10px] font-bold text-[var(--text-muted)]">بابەت</label>
                           <HistoryInput 
@@ -3558,7 +3127,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                               {newTransaction.receiptItems.map((item, idx) => (
-                                <tr key={item.id || idx}>
+                                <tr key={item.id || `edit-receipt-${idx}`}>
                                   <td className="px-3 py-2 font-bold">{item.name}</td>
                                   <td className="px-3 py-2 text-center">{item.quantity || '-'}</td>
                                   <td className="px-3 py-2 text-center">{(item.unitPrice || item.price).toLocaleString()}</td>
@@ -3694,7 +3263,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <label className="text-sm font-black text-[var(--text-muted)] mr-1">وەسڵ (بابەت و نرخ)</label>
                       <div className="space-y-3">
                         {(newTransaction.receiptItems || []).map((item, index) => (
-                          <div key={item.id || index} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
+                          <div key={item.id || `new-receipt-item-${index}`} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەت</label>
                               <input 
@@ -4144,30 +3713,6 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           </div>
         )}
 
-        <VoiceCommandModal 
-          isOpen={showVoiceModal} 
-          onClose={() => setShowVoiceModal(false)} 
-          onCommand={handleVoiceCommand}
-          onAudioCommand={handleVoiceCommandAudio}
-          isListening={isListening}
-          setIsListening={setIsListening}
-          message={voiceMessage}
-          setVoiceMessage={setVoiceMessage}
-        />
-
-        {/* System Manager Floating Button */}
-        <motion.button
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setActiveTab('ai_chat')}
-          className="fixed bottom-24 right-6 w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-full shadow-2xl flex items-center justify-center z-50 group no-print"
-        >
-          <div className="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-20 group-hover:opacity-40" />
-          <BrainCircuit className="w-8 h-8 relative z-10" />
-          <div className="absolute -top-12 right-0 bg-slate-800 text-white text-[10px] font-black px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            بەڕێوەبەری سیستەم
-          </div>
-        </motion.button>
       </AnimatePresence>
     </div>
   );
