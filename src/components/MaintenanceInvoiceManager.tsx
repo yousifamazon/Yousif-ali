@@ -789,7 +789,7 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
                   </thead>
                   <tbody>
                       {items.map((item, index) => (
-                        <tr key={item.id}>
+                        <tr key={`${item.id}-${index}`}>
                             <td>{item.total.toLocaleString()}</td>
                             <td><input type="number" className="inv-input transparent" style={{textAlign: 'center'}} value={item.unitPrice || ''} onChange={e => handleItemChange(item.id, 'unitPrice', Number(e.target.value))} /></td>
                             <td><input type="number" className="inv-input transparent" style={{textAlign: 'center'}} value={item.quantity || ''} onChange={e => handleItemChange(item.id, 'quantity', Number(e.target.value))} /></td>
@@ -995,9 +995,9 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredInvoices.map(invoice => (
+        {filteredInvoices.map((invoice, idx) => (
           <motion.div 
-            key={invoice.id}
+            key={`${invoice.id}-${idx}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(

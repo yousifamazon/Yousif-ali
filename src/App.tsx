@@ -1701,8 +1701,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {items.length === 0 ? (
             <div className="text-center py-12 text-[var(--text-muted)]">هیچ ئاواتێک نییە</div>
           ) : (
-            items.map(item => (
-              <Card key={`${item.id}-wishlist-card`} className={cn("p-5", item.completed && "opacity-60")}>
+            items.map((item, idx) => (
+              <Card key={`${item.id}-wishlist-card-${idx}`} className={cn("p-5", item.completed && "opacity-60")}>
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -1780,8 +1780,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </div>
 
         <div className="space-y-4">
-          {(data.debts || []).map(debt => (
-            <Card key={`${debt.id}-debt-card`} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
+          {(data.debts || []).map((debt, idx) => (
+            <Card key={`${debt.id}-debt-card-${idx}`} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h4 className={cn("font-bold text-lg", debt.completed && "line-through text-[var(--text-muted)]")}>{debt.personName}</h4>
@@ -1857,10 +1857,10 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </div>
 
         <div className="space-y-4">
-          {(data.savingsGoals || []).map(goal => {
+          {(data.savingsGoals || []).map((goal, idx) => {
             const progress = (goal.currentAmount / goal.targetAmount) * 100;
             return (
-              <Card key={`${goal.id}-savings-card`} className="p-6 space-y-4">
+              <Card key={`${goal.id}-savings-card-${idx}`} className="p-6 space-y-4">
                 <div className="flex justify-between items-start">
                   <h4 className="font-bold text-xl">{goal.title}</h4>
                   <div className="flex items-center gap-2">
@@ -1997,8 +1997,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stats.budgetProgress.length > 0 ? (
-              stats.budgetProgress.map(budget => (
-                <Card key={budget.id} className="relative group">
+              stats.budgetProgress.map((budget, idx) => (
+                <Card key={`${budget.id}-${idx}`} className="relative group">
                   <button 
                     onClick={() => deleteBudget(budget.id)}
                     className="absolute top-4 left-4 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
@@ -2174,7 +2174,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       </div>
 
       <div className="space-y-8">
-        {['ئەمڕۆ', 'سبەی', 'دواتر'].map(period => {
+        {['ئەمڕۆ', 'سبەی', 'دواتر'].map((period, pIdx) => {
           const filteredTasks = (data.tasks || []).filter(t => {
             const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
             if (!matchesSearch) return false;
@@ -2186,7 +2186,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           if (filteredTasks.length === 0) {
             if (searchQuery) return null;
             return (
-              <div key={period} className="flex flex-col items-center justify-center py-12 text-center">
+              <div key={`empty-p-${period}-${pIdx}`} className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="w-16 h-16 bg-[var(--bg-main)] rounded-full flex items-center justify-center mb-4">
                   <CheckSquare className="w-8 h-8 text-[var(--text-muted)]" />
                 </div>
@@ -2196,11 +2196,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           }
 
           return (
-            <div key={period} className="space-y-4">
+            <div key={`task-p-${period}-${pIdx}`} className="space-y-4">
               <h3 className="text-lg font-black text-[var(--text-muted)] mr-2">{period}</h3>
               <div className="grid grid-cols-1 gap-4">
-                {filteredTasks.map(task => (
-                  <Card key={`${task.id}-daily-task`} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
+                {filteredTasks.map((task, idx) => (
+                  <Card key={`${task.id}-d-task-${period}-${idx}`} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
                     <div className="flex items-center gap-5">
                       <button onClick={() => toggleTask(task.id)} className={cn(
                         "transition-all transform active:scale-90",
@@ -2211,13 +2211,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
                           {(task.workTypes || []).map((wt, idx) => (
-                            <span key={`${task.id}-wt-${idx}`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                            <span key={`${task.id}-wt-${wt}-${idx}`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
                         <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
                         <div className="mt-2 space-y-1">
                           {(task.details || []).map((d, i) => (
-                            <div key={d.id || `task-${task.id}-detail-${i}`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                            <div key={`${task.id}-detail-${d.id || i}`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
                               <p className="text-xs font-black text-[var(--text-muted)]">{d.subject}</p>
                               <p className="text-xs text-[var(--text-muted)] mt-0.5">{d.work}</p>
                             </div>
@@ -2375,7 +2375,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {category === 'personal' && (data.descriptions || []).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {(data.descriptions || []).map((cat, idx) => (
-                <div key={`${cat}-${idx}`} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
+                <div key={`fin-desc-${cat}-${idx}`} className="flex items-center gap-1 bg-[var(--bg-main)] px-2 py-1 rounded-lg text-[10px] font-bold text-[var(--text-muted)] group relative">
                   {editingDescription?.index === idx ? (
                     <input 
                       autoFocus
@@ -2501,7 +2501,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.receiptItems && t.receiptItems.length > 0 && (
                           <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={item.id || `preview-item-${i}`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
+                              <div key={`${item.id || 'item'}-${i}-preview`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
                                 <span>{item.name}</span>
                                 <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
@@ -2645,15 +2645,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         </div>
 
         <div className="bg-[var(--bg-card)] p-3 rounded-3xl border border-[var(--border-color)] shadow-sm flex flex-wrap gap-2">
-          {[
-            { id: 'all', label: 'هەمووی', icon: Wallet },
-            { id: 'income', label: 'داهات', icon: TrendingUp },
-            { id: 'expense', label: 'خەرجی', icon: TrendingDown },
-            { id: 'savings', label: 'پاشەکەوت', icon: Vault },
-          ].map(f => (
-            <button
-              key={`history-filter-${f.id}`}
-              onClick={() => setHistoryFilter(f.id as any)}
+            {[
+              { id: 'all', label: 'هەمووی', icon: Wallet },
+              { id: 'income', label: 'داهات', icon: TrendingUp },
+              { id: 'expense', label: 'خەرجی', icon: TrendingDown },
+              { id: 'savings', label: 'پاشەکەوت', icon: Vault },
+            ].map((f, fIdx) => (
+              <button
+                key={`h-filter-${f.id}-${fIdx}`}
+                onClick={() => setHistoryFilter(f.id as any)}
               className={cn(
                 "flex-1 min-w-[100px] flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black text-sm transition-all",
                 historyFilter === f.id 
@@ -2907,9 +2907,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'savings', label: 'پاشەکەوت', icon: Vault },
                     { id: 'history', label: 'مێژووی تۆمارەکان', icon: History },
                     { id: 'settings', label: 'ڕێکخستن', icon: Settings },
-                  ].map(tab => (
+                  ].map((tab, idx) => (
                     <button
-                      key={`${tab.id}-sidebar-tab`}
+                      key={`${tab.id}-sidebar-tab-${idx}`}
                       onClick={() => {
                         setActiveTab(tab.id as any);
                         setShowSidebar(false);
@@ -3129,7 +3129,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   {/* Selected Custom Types */}
                   <div className="flex flex-wrap gap-2 mt-2">
                     {(newTask.workTypes || []).filter(t => !['سایەقی', 'کارەبا', 'سیانەی ناو کارگە', 'دوکان'].includes(t)).map((t, i) => (
-                      <div key={`custom-wt-${i}`} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
+                      <div key={`custom-wt-${t}-${i}`} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 group">
                         <span 
                           contentEditable 
                           suppressContentEditableWarning
@@ -3574,9 +3574,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">جۆری سوتەمەنی</label>
                       <div className="grid grid-cols-4 gap-1">
-                        {['بەنزین', 'گاز', 'خاز', 'نەفت'].map(type => (
+                        {['بەنزین', 'گاز', 'خاز', 'نەفت'].map((type, tIdx) => (
                           <button
-                            key={`${type}-fuel-type-btn`}
+                            key={`${type}-fuel-btn-${tIdx}`}
                             onClick={() => setNewTransaction(p => ({ ...p, fuelType: type as any }))}
                             className={cn(
                               "py-1.5 rounded-lg text-[10px] font-bold transition-all border-2",
@@ -3725,9 +3725,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </div>
                   {newTransaction.isRecurring && (
                     <div className="flex bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-color)]">
-                      {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
+                      {['daily', 'weekly', 'monthly', 'yearly'].map((p, idx) => (
                         <button
-                          key={p}
+                          key={`recurring-p-${p}-${idx}`}
                           onClick={() => setNewTransaction(prev => ({ ...prev, recurringPeriod: p as any }))}
                           className={cn(
                             "flex-1 py-2 rounded-xl text-[10px] font-black transition-all",

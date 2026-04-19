@@ -168,8 +168,8 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ items, onSav
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-main)]">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-[var(--bg-main)]/50 transition-colors">
+              {filteredItems.map((item, idx) => (
+                <tr key={`${item.id}-${idx}`} className="hover:bg-[var(--bg-main)]/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-bold text-[var(--text-main)]">{item.name}</div>
                     <div className="text-xs text-[var(--text-muted)]">دوا نوێکردنەوە: {format(new Date(item.lastUpdated), 'yyyy-MM-dd HH:mm')}</div>
