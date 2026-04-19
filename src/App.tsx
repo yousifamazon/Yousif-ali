@@ -19,7 +19,7 @@ import {
   Wallet,
   Calendar,
   Clock,
-  Activity,
+  Activity as ActivityIcon,
   Globe,
   ChevronRight,
   ChevronDown,
@@ -78,7 +78,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, MaintenanceInvoice } from './types';
+import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, MaintenanceInvoice, Activity } from './types';
 import { MaintenanceInvoiceManager } from './components/MaintenanceInvoiceManager';
 import { CustomerManager } from './components/CustomerManager';
 import { ReportsDashboard } from './components/ReportsDashboard';
@@ -103,7 +103,8 @@ import {
   deleteSavingsGoalFromFirebase,
   syncProductToFirebase,
   syncBudgetToFirebase,
-  deleteBudgetFromFirebase
+  deleteBudgetFromFirebase,
+  syncActivityToFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { FinancialDashboard } from './components/FinancialDashboard';
@@ -116,7 +117,7 @@ import {
   OperationType 
 } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc, getDocs, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, getDocs, getDoc, setDoc, limit } from 'firebase/firestore';
 
 // Polyfill for crypto.randomUUID if not available
 if (typeof crypto === 'undefined') {
@@ -141,6 +142,8 @@ if (typeof crypto === 'undefined') {
 
 import { AIAssistant } from './components/AIAssistant';
 import { CommandPalette } from './components/CommandPalette';
+import { ActivityFeed } from './components/ActivityFeed';
+import { Eye, EyeOff, Shield, ShieldAlert, BarChart3, History } from 'lucide-react';
 
 // --- Components ---
 
@@ -508,7 +511,21 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' | 'info' }[]>([]);
+
+  const logActivity = async (title: string, type: string, entityType: Activity['entityType']) => {
+    const activity: Activity = {
+      id: crypto.randomUUID(),
+      title,
+      type,
+      entityType,
+      timestamp: new Date().toISOString()
+    };
+    if (user) {
+      await syncActivityToFirebase(activity);
+    }
+  };
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = crypto.randomUUID();
@@ -906,6 +923,12 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       setData(prev => ({ ...prev, budgets }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/budgets`));
 
+    const activitiesQuery = query(collection(db, `users/${user.uid}/activities`), orderBy('timestamp', 'desc'), limit(20));
+    const unsubActivities = onSnapshot(activitiesQuery, (snapshot) => {
+      const activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+      setData(prev => ({ ...prev, activities }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/activities`));
+
     return () => {
       unsubTasks();
       unsubTrans();
@@ -916,6 +939,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       unsubProducts();
       unsubMaintenance();
       unsubBudgets();
+      unsubActivities();
     };
   }, [user]);
 
@@ -1106,6 +1130,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         tasks: prev.tasks.map(t => t.id === editingTaskId ? updatedTask : t)
       }));
 
+      await logActivity(`دەستکاری ئیش: ${updatedTask.title}`, 'دەستکاری', 'task');
+
       if (user) {
         try {
           await syncTaskToFirebase(updatedTask);
@@ -1123,6 +1149,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       
       // Optimistic update
       setData(prev => ({ ...prev, tasks: [task, ...prev.tasks] }));
+
+      await logActivity(`ئیشی نوێ: ${task.title}`, 'تۆمارکردن', 'task');
 
       if (user) {
         try {
@@ -1233,6 +1261,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         transactions: prev.transactions.map(t => t.id === editingTransactionId ? updatedTransaction : t)
       }));
 
+      await logActivity(`${updatedTransaction.type === 'income' ? 'داهات' : 'خەرجی'}: ${updatedTransaction.description}`, 'دەستکاری', 'transaction');
+
       if (user) {
         try {
           await syncTransactionToFirebase(updatedTransaction);
@@ -1249,6 +1279,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       
       // Optimistic update
       setData(prev => ({ ...prev, transactions: [transaction, ...prev.transactions] }));
+
+      await logActivity(`${transaction.type === 'income' ? 'داهات' : 'خەرجی'}: ${transaction.description}`, 'تۆمارکردن', 'transaction');
 
       if (user) {
         try {
@@ -1910,6 +1942,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           transactions={data.transactions || []} 
           debts={data.debts || []} 
           savingsGoals={data.savingsGoals || []}
+          activities={data.activities || []}
+          isPrivacyMode={isPrivacyMode}
+          onTogglePrivacy={() => setIsPrivacyMode(!isPrivacyMode)}
           currency={currency}
           exchangeRate={exchangeRate}
           onAction={(type) => {
@@ -2637,6 +2672,19 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               className="w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all"
             >
               {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+            </button>
+
+            <button 
+              onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+              className={cn(
+                "w-12 h-12 border rounded-2xl flex items-center justify-center shadow-sm transition-all",
+                isPrivacyMode 
+                  ? "bg-amber-500 border-amber-600 text-white animate-pulse" 
+                  : "bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-amber-500"
+              )}
+              title={isPrivacyMode ? "ناچالاککردنی باری پاراستن" : "چالاککردنی باری پاراستن"}
+            >
+              {isPrivacyMode ? <ShieldAlert className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
             </button>
 
             {user ? (

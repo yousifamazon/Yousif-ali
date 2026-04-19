@@ -159,9 +159,19 @@ export type Budget = {
   startDate: string;
 };
 
+export type Activity = {
+  id: string;
+  type: string;
+  title: string;
+  timestamp: string;
+  entityType: 'transaction' | 'task' | 'wishlist' | 'debt' | 'invoice' | 'system';
+  userId?: string;
+};
+
 export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
+  activities?: Activity[];
   wishlist?: WishlistItem[];
   debts?: Debt[];
   savingsGoals?: SavingsGoal[];

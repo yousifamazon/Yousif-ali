@@ -163,6 +163,15 @@ service cloud.firestore {
              data.userId == request.auth.uid;
     }
 
+    function isValidActivity(data) {
+      return data.id is string &&
+             data.type is string &&
+             data.title is string &&
+             data.timestamp is string && isValidDateTime(data.timestamp) &&
+             data.entityType in ["transaction", "task", "wishlist", "debt", "invoice", "system"] &&
+             data.userId == request.auth.uid;
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -248,6 +257,16 @@ service cloud.firestore {
       match /settings/{settingId} {
         allow read: if isOwner(userId);
         allow write: if isOwner(userId);
+      }
+
+      match /activities/{activityId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidActivity(request.resource.data);
+        allow update: if isOwner(userId) && isValidActivity(request.resource.data) &&
+                         request.resource.data.id == resource.data.id &&
+                         (!('userId' in resource.data) || request.resource.data.userId == resource.data.userId) &&
+                         (!('timestamp' in resource.data) || request.resource.data.timestamp == resource.data.timestamp);
+        allow delete: if isOwner(userId);
       }
     }
   }

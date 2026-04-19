@@ -1,4 +1,4 @@
-import { AppData, Task, Transaction, MaintenanceInvoice } from "../types";
+import { AppData, Task, Transaction, MaintenanceInvoice, Activity } from "../types";
 import { 
   db, 
   auth, 
@@ -335,6 +335,17 @@ export const deleteBudgetFromFirebase = async (id: string) => {
     await deleteDoc(doc(db, path));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const syncActivityToFirebase = async (activity: Activity) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/activities/${activity.id}`;
+  try {
+    const docRef = doc(db, path);
+    await setDoc(docRef, { ...activity, userId: auth.currentUser.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 };
 

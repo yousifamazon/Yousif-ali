@@ -112,6 +112,96 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "invoiceNumber", "date", "customerName", "createdAt"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A user activity log entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "entityType": { "type": "string", "enum": ["transaction", "task", "wishlist", "debt", "invoice", "system"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "type", "title", "timestamp", "entityType"]
+    },
+    "WishlistItem": {
+      "title": "WishlistItem",
+      "description": "An item the user wants to buy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "estimatedPrice": { "type": "number" },
+        "notes": { "type": "string" },
+        "type": { "type": "string", "enum": ["general", "private"] },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "completed", "userId", "createdAt"]
+    },
+    "Debt": {
+      "title": "Debt",
+      "description": "A debt record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "personName": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["owed", "owing"] },
+        "date": { "type": "string" },
+        "notes": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "personName", "amount", "type", "date", "userId", "createdAt"]
+    },
+    "SavingsGoal": {
+      "title": "SavingsGoal",
+      "description": "A financial savings goal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "deadline": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "targetAmount", "currentAmount", "userId", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "A scanned product",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "barcode": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "barcode", "name", "price", "userId", "createdAt"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A monthly budget for a category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "category", "amount", "userId"]
     }
   },
   "firestore": {
@@ -130,6 +220,30 @@
     "/users/{userId}/maintenanceInvoices/{invoiceId}": {
       "schema": "MaintenanceInvoice",
       "description": "User's maintenance invoices"
+    },
+    "/users/{userId}/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "User's activity log"
+    },
+    "/users/{userId}/wishlist/{wishlistItemId}": {
+      "schema": "WishlistItem",
+      "description": "User's wishlist items"
+    },
+    "/users/{userId}/debts/{debtId}": {
+      "schema": "Debt",
+      "description": "User's debts"
+    },
+    "/users/{userId}/savingsGoals/{goalId}": {
+      "schema": "SavingsGoal",
+      "description": "User's savings goals"
+    },
+    "/users/{userId}/products/{productId}": {
+      "schema": "Product",
+      "description": "User's scanned products"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": "Budget",
+      "description": "User's monthly budgets"
     }
   }
 }

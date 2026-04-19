@@ -19,7 +19,8 @@ import {
   PolarRadiusAxis,
   Radar
 } from 'recharts';
-import { MaintenanceInvoice, Transaction, Debt, SavingsGoal } from '../types';
+import { MaintenanceInvoice, Transaction, Debt, SavingsGoal, Activity } from '../types';
+import { ActivityFeed } from './ActivityFeed';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -36,7 +37,9 @@ import {
   Plus,
   Vault,
   Calendar,
-  DollarSign
+  DollarSign,
+  EyeOff,
+  History
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -47,6 +50,9 @@ interface Props {
   transactions: Transaction[];
   debts: Debt[];
   savingsGoals: SavingsGoal[];
+  activities?: Activity[];
+  isPrivacyMode?: boolean;
+  onTogglePrivacy?: () => void;
   currency?: 'IQD' | 'USD';
   exchangeRate?: number;
   onAction?: (type: 'income' | 'expense' | 'savings') => void;
@@ -57,11 +63,15 @@ export const FinancialDashboard: React.FC<Props> = ({
   transactions, 
   debts, 
   savingsGoals,
+  activities = [],
+  isPrivacyMode = false,
+  onTogglePrivacy,
   currency = 'IQD', 
   exchangeRate = 1500,
   onAction
 }) => {
   const formatValue = (amount: number) => {
+    if (isPrivacyMode) return '••••••';
     if (currency === 'USD') {
       return `$${(amount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -448,6 +458,61 @@ export const FinancialDashboard: React.FC<Props> = ({
                 <Area type="monotone" dataKey="balance" stroke="#60a5fa" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+        <div className="lg:col-span-2 bg-[var(--bg-card)] p-8 md:p-10 rounded-[48px] border border-[var(--border-color)]">
+          <ActivityFeed activities={activities} />
+        </div>
+        
+        <div className="space-y-6">
+          <div className="bg-[var(--bg-card)] p-8 rounded-[40px] border border-[var(--border-color)] shadow-sm">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-amber-500 rounded-2xl text-white">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-[var(--text-main)]">باری پاراستن</h4>
+                <p className="text-[10px] font-bold text-[var(--text-muted)]">Privacy Mode</p>
+              </div>
+            </div>
+            <p className="text-xs font-bold text-[var(--text-muted)] mb-6">
+              کاتێک ئەم بارە چالاک دەکەیت، هەموو بڕە پارە هەستیارەکان دادەپۆشرێن بۆ ئەوەی کەس نەیان بینێت.
+            </p>
+            <div 
+              onClick={onTogglePrivacy}
+              className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl flex items-center justify-between cursor-pointer group"
+            >
+              <span className="text-xs font-black transition-colors group-hover:text-blue-600">{isPrivacyMode ? 'چالاکە' : 'ناچالاکە'}</span>
+              <div className={cn(
+                "w-12 h-6 rounded-full relative transition-colors",
+                isPrivacyMode ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
+              )}>
+                <div className={cn(
+                  "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                  isPrivacyMode ? "right-1" : "right-7"
+                )} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[40px] text-white shadow-xl shadow-blue-500/10">
+            <h4 className="text-sm font-black mb-1">پلانی ساڵانە</h4>
+            <p className="text-[10px] text-white/60 mb-6 uppercase tracking-widest font-bold">Annual Strategy</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs">
+                <span>ئاستی پاشەکەوت</span>
+                <span className="font-black">%{Math.round(stats.savingsRate)}</span>
+              </div>
+              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-white rounded-full" style={{ width: `${stats.savingsRate}%` }} />
+              </div>
+              <p className="text-[10px] font-bold leading-relaxed text-blue-100">
+                ئەگەر بەم شێوەیە بەردەوام بیت، لە کۆتایی ساڵدا نزیکەی {formatValue(stats.balance * 12)} ت کۆ دەبێتەوە.
+              </p>
+            </div>
           </div>
         </div>
       </div>
