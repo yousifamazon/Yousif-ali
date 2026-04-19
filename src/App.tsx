@@ -140,6 +140,7 @@ if (typeof crypto === 'undefined') {
 }
 
 import { AIAssistant } from './components/AIAssistant';
+import { CommandPalette } from './components/CommandPalette';
 
 // --- Components ---
 
@@ -506,6 +507,7 @@ export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' | 'info' }[]>([]);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -974,6 +976,38 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     saveToStorage(data);
   }, [data]);
 
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
+
+  const handleSelectItem = (type: string, id: string) => {
+    switch (type) {
+      case 'transaction':
+        setActiveTab('finance');
+        break;
+      case 'task':
+        setActiveTab('tasks');
+        break;
+      case 'wishlist':
+        setActiveTab('wishlist');
+        break;
+      case 'debt':
+        setActiveTab('debts');
+        break;
+      case 'invoice':
+        setActiveTab('invoices');
+        break;
+    }
+    addToast('بەشی پەیوەندیدار کرایەوە', 'info');
+  };
+
   // --- Calculations ---
 
   const stats = useMemo(() => {
@@ -1128,17 +1162,26 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     if (!finalAmount && !newTransaction.description && !newTransaction.receiptImage) return;
 
+    // Smart Category Inference
+    let category = newTransaction.category || 'personal';
+    if (!newTransaction.category) {
+      const desc = (newTransaction.description || '').toLowerCase();
+      if (desc.includes('بەنزین') || desc.includes('گاز')) category = 'fuel';
+      else if (desc.includes('سایەق') || desc.includes('گەیاندن')) category = 'driver';
+      else if (desc.includes('شیر') || desc.includes('مانگا')) category = 'market';
+    }
+
     const transactionData: any = {
       amount: finalAmount,
       description: newTransaction.description || 'بێ وەسف',
       date: newTransaction.date || format(new Date(), 'yyyy-MM-dd'),
       type: newTransaction.type || 'expense',
-      category: newTransaction.category || 'personal',
+      category: category,
       subCategory: newTransaction.subCategory || '',
       paymentMethod: newTransaction.paymentMethod || 'cash',
       receiptItems: newTransaction.receiptItems,
       receiptImage: newTransaction.receiptImage,
-      isDelivery: newTransaction.isDelivery,
+      isDelivery: newTransaction.isDelivery || category === 'driver',
       savingsEffect: newTransaction.savingsEffect || 'none',
       discount: newTransaction.discount,
       paidAmount: newTransaction.paidAmount,
@@ -1148,8 +1191,8 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       recurringPeriod: newTransaction.recurringPeriod || 'monthly'
     };
 
-    // Only add work-specific fields if it's a work transaction
-    if (newTransaction.category === 'work') {
+    // Only add work-specific fields if it's a work transaction or special category
+    if (category === 'work' || category === 'driver' || category === 'market') {
       transactionData.milkQuantity = newTransaction.milkQuantity;
       transactionData.maintenanceType = newTransaction.maintenanceType;
       transactionData.workLocation = newTransaction.workLocation;
@@ -3808,6 +3851,19 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             </motion.div>
           </div>
         )}
+        
+        <CommandPalette 
+          isOpen={isCommandPaletteOpen} 
+          onClose={() => setIsCommandPaletteOpen(false)} 
+          data={{
+            transactions: data.transactions || [],
+            tasks: data.tasks || [],
+            wishlist: data.wishlist || [],
+            debts: data.debts || [],
+            invoices: data.maintenanceInvoices || []
+          }}
+          onSelectItem={handleSelectItem}
+        />
 
       </AnimatePresence>
     </div>

@@ -171,6 +171,17 @@ export const FinancialDashboard: React.FC<Props> = ({
     });
   }, [invoices, transactions]);
 
+  const forecastData = useMemo(() => {
+    const dailyIncome = stats.income / 30;
+    const dailyExpense = stats.expense / 30;
+    const currentBalance = stats.totalCash;
+    
+    return Array.from({ length: 30 }, (_, i) => ({
+      day: i + 1,
+      balance: currentBalance + (dailyIncome - dailyExpense) * (i + 1)
+    }));
+  }, [stats]);
+
   const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
   return (
@@ -187,7 +198,10 @@ export const FinancialDashboard: React.FC<Props> = ({
         <div className="flex-1">
           <h4 className="font-black text-blue-600 text-xs uppercase tracking-widest mb-1">تێبینی ژیری دەستکرد بۆ یوسف</h4>
           <p className="text-sm font-bold text-[var(--text-main)] italic leading-relaxed">
-            "{stats.savingsRate > 20 ? 'دەستخۆش یوسف! ڕێژەی پاشەکەوتت زۆر باشە، هەوڵبدە ئەم مانگە بەم شێوەیە بەردەوام بیت.' : 'یوسف، خەرجییەکانت کەمێک زیاتر بوون لەم هەفتەیەدا، ئاگاداری ئەو پارە پاشەکەوتانە بە کە دەمێنێتەوە.'}"
+            "{stats.totalIOwe > stats.income * 0.5 ? 'یوسف، بڕی قەرزەکانت زۆرە بە بەراورد بە داهاتت، هەوڵبدە سەرەتا قەرزەکان کەمن بکەیتەوە.' : 
+               stats.totalOwedToMe > stats.totalCash ? 'بڕێکی باش پارەت لای خەڵکە، ئەگەر ئەو پارانە وەربگریتەوە باڵانست زۆر بەرز دەبێتەوە.' :
+               stats.savingsRate > 25 ? 'دەستخۆش یوسف! ڕێژەی پاشەکەوتت نایابە (%' + Math.round(stats.savingsRate) + ')، ئەمە باشترین پلەی داراییە.' : 
+               'باری دارایی جێگیرە، یوسف. بەردەوام بە لە تۆمارکردنی وردی وردی خەرجییەکانت.'}"
           </p>
         </div>
       </motion.div>
@@ -312,7 +326,7 @@ export const FinancialDashboard: React.FC<Props> = ({
 
       {/* --- Advanced Analytics Section --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-3 bg-[var(--bg-card)] p-8 md:p-10 rounded-[48px] border border-[var(--border-color)] shadow-sm">
+        <div className="lg:col-span-2 bg-[var(--bg-card)] p-8 md:p-10 rounded-[48px] border border-[var(--border-color)] shadow-sm">
           <div className="flex items-center justify-between mb-10">
             <div>
               <h3 className="text-2xl font-black text-[var(--text-main)] mb-1">ڕەوتی دارایی ١٤ ڕۆژ</h3>
@@ -343,43 +357,95 @@ export const FinancialDashboard: React.FC<Props> = ({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 'bold' }} 
-                  dy={10}
-                />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 'bold' }} dy={10} />
                 <YAxis hide />
                 <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'var(--bg-card)', 
-                    borderColor: 'var(--border-color)',
-                    borderRadius: '24px',
-                    boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)',
-                    border: 'none',
-                    padding: '20px'
-                  }} 
+                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '24px', border: 'none', padding: '20px' }} 
                   itemStyle={{ fontWeight: '900', fontSize: '14px' }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="income" 
-                  stroke="#2563eb" 
-                  strokeWidth={4}
-                  fillOpacity={1} 
-                  fill="url(#colorIncome)" 
-                  animationDuration={2000}
+                <Area type="monotone" dataKey="income" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorIncome)" />
+                <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={4} fillOpacity={1} fill="url(#colorExpense)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-[var(--bg-card)] p-8 rounded-[48px] border border-[var(--border-color)] flex flex-col items-center justify-center">
+          <h4 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-6">دابەشبوونی خەرجییەکان</h4>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={stats.categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {stats.categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', border: 'none' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="w-full space-y-3 mt-4">
+            {stats.categoryData.map((cat, idx) => (
+              <div key={cat.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                  <span className="text-xs font-bold text-[var(--text-main)]">{cat.name}</span>
+                </div>
+                <span className="text-[10px] font-black text-[var(--text-muted)]">{Math.round((cat.value / stats.expense) * 100)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* --- Financial Forecast Projection --- */}
+      <div className="bg-slate-900 p-8 md:p-12 rounded-[56px] text-white relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110" />
+        <div className="relative z-10 flex flex-col md:flex-row gap-12 items-center">
+          <div className="flex-1 space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 border border-blue-600/30 rounded-full">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">پێشبینی داهاتوو</span>
+            </div>
+            <h3 className="text-4xl font-black tracking-tighter leading-tight">
+              یوسف، پاشەکەوتت چۆن دەبێت لە <span className="text-blue-400">٣٠ ڕۆژی</span> داهاتوودا؟
+            </h3>
+            <p className="text-slate-400 font-bold leading-relaxed">
+              بەپێی ڕەوتی خەرجی و داهاتی ئەم مانگەت، پێشبینی دەکەین باڵانسی کۆتایی مانگت بگاتە نزیکەی {formatValue(forecastData[29].balance)}.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-white/5 border border-white/10 rounded-3xl">
+                <div className="text-[10px] text-slate-500 font-black mb-1 uppercase tracking-widest">تێکڕای خەرجی ڕۆژانە</div>
+                <div className="text-lg font-black">{formatValue(stats.expense / 30)}</div>
+              </div>
+              <div className="p-4 bg-white/5 border border-white/10 rounded-3xl">
+                <div className="text-[10px] text-slate-500 font-black mb-1 uppercase tracking-widest">گەشەی باڵانس</div>
+                <div className="text-lg font-black text-emerald-400">+{Math.round(stats.savingsRate)}%</div>
+              </div>
+            </div>
+          </div>
+          <div className="w-full md:w-[400px] h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={forecastData}>
+                <defs>
+                  <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px' }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="expense" 
-                  stroke="#f43f5e" 
-                  strokeWidth={4}
-                  fillOpacity={1} 
-                  fill="url(#colorExpense)" 
-                  animationDuration={2000}
-                />
+                <Area type="monotone" dataKey="balance" stroke="#60a5fa" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
