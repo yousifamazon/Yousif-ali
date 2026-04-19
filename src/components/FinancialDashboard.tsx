@@ -140,7 +140,15 @@ export const FinancialDashboard: React.FC<Props> = ({
     healthScore -= Math.min(25, debtRatio / 2);
     healthScore = Math.max(0, Math.min(100, healthScore));
 
-    const totalSavings = (savingsGoals || []).reduce((acc, goal) => acc + (goal.currentAmount || 0), 0);
+    // Calculate total net savings from goals and generic savings transactions
+    const goalSavings = (savingsGoals || []).reduce((acc, goal) => acc + (goal.currentAmount || 0), 0);
+    const genericSavings = transactionsList.filter(t => t.type === 'savings').reduce((acc, t) => {
+      if (t.savingsEffect === 'subtract') return acc + t.amount;
+      if (t.savingsEffect === 'add') return acc - t.amount;
+      return acc;
+    }, 0);
+    
+    const totalSavings = goalSavings + genericSavings;
 
     return {
       income,
@@ -242,11 +250,11 @@ export const FinancialDashboard: React.FC<Props> = ({
             <div className="w-full max-w-sm mb-12">
               <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[32px] p-6 text-center transform hover:scale-105 transition-transform duration-500 group/savings">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-300" />
-                  <span className="text-[10px] text-emerald-300 font-bold uppercase tracking-widest">کۆی داهات</span>
+                  <Vault className="w-4 h-4 text-blue-300" />
+                  <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">کۆی پاشەکەوت (هەڵگرتن)</span>
                 </div>
-                <div className="text-2xl font-black text-white group-hover/savings:text-emerald-200 transition-colors">
-                  {formatValue(stats.income)}
+                <div className="text-4xl font-black text-white group-hover/savings:text-blue-200 transition-colors">
+                  {formatValue(stats.totalSavings)}
                 </div>
               </div>
             </div>
@@ -256,9 +264,9 @@ export const FinancialDashboard: React.FC<Props> = ({
                 { label: 'داهات', type: 'income', icon: Plus },
                 { label: 'خەرجی', type: 'expense', icon: ArrowUpRight },
                 { label: 'هەلگرتن', type: 'savings', icon: Vault },
-              ].map((btn) => (
+              ].map((btn, btnIdx) => (
                 <motion.button
-                  key={btn.type}
+                  key={`${btn.type}-action-btn-${btnIdx}`}
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onAction?.(btn.type as any)}
@@ -395,7 +403,7 @@ export const FinancialDashboard: React.FC<Props> = ({
                   dataKey="value"
                 >
                   {stats.categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', border: 'none' }} />
@@ -404,7 +412,7 @@ export const FinancialDashboard: React.FC<Props> = ({
           </div>
           <div className="w-full space-y-3 mt-4">
             {stats.categoryData.map((cat, idx) => (
-              <div key={cat.name} className="flex items-center justify-between">
+              <div key={`dashboard-cat-${cat.name}-${idx}`} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                   <span className="text-xs font-bold text-[var(--text-main)]">{cat.name}</span>

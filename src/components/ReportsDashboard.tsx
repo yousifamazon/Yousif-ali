@@ -184,7 +184,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
                   dataKey="value"
                 >
                   {workTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip 

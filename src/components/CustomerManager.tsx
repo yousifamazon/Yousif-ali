@@ -116,7 +116,7 @@ export const CustomerManager: React.FC<Props> = ({ invoices, onViewInvoice }) =>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {filteredCustomers.map((customer, idx) => (
           <motion.div 
-            key={customer.name}
+            key={`${customer.name}-${idx}`}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: idx * 0.05 }}
