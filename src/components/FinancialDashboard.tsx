@@ -140,15 +140,12 @@ export const FinancialDashboard: React.FC<Props> = ({
     healthScore -= Math.min(25, debtRatio / 2);
     healthScore = Math.max(0, Math.min(100, healthScore));
 
-    // Calculate total net savings from goals and generic savings transactions
-    const goalSavings = (savingsGoals || []).reduce((acc, goal) => acc + (goal.currentAmount || 0), 0);
-    const genericSavings = transactionsList.filter(t => t.type === 'savings').reduce((acc, t) => {
+    // Source of truth for savings is the transaction ledger
+    const totalSavings = transactionsList.filter(t => t.type === 'savings').reduce((acc, t) => {
       if (t.savingsEffect === 'subtract') return acc + t.amount;
       if (t.savingsEffect === 'add') return acc - t.amount;
       return acc;
     }, 0);
-    
-    const totalSavings = goalSavings + genericSavings;
 
     return {
       income,

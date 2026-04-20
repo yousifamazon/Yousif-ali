@@ -1041,7 +1041,11 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
     const personalExpense = personal.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     const personalIncome = personal.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-    const personalSavings = personal.filter(t => t.type === 'savings').reduce((acc, t) => acc + t.amount, 0);
+    const totalSavings = personal.filter(t => t.type === 'savings').reduce((acc, t) => {
+      if (t.savingsEffect === 'subtract') return acc + t.amount;
+      if (t.savingsEffect === 'add') return acc - t.amount;
+      return acc;
+    }, 0);
     
     let balance = personalIncome - personalExpense;
     personal.filter(t => t.type === 'savings').forEach(t => {
@@ -1094,7 +1098,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       .filter(t => t.category === 'work' && t.description === 'هێنانەوەی شیر')
       .reduce((acc, t) => acc + (t.milkQuantity || 0), 0);
 
-    return { personalExpense, personalIncome, personalSavings, balance, pendingTasks, chartData, monthlyIncome, monthlyExpense, totalMilk, budgetProgress };
+    return { personalExpense, personalIncome, personalSavings: totalSavings, balance, pendingTasks, chartData, monthlyIncome, monthlyExpense, totalMilk, budgetProgress };
   }, [data]);
 
   // --- Handlers ---
@@ -2419,10 +2423,18 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {(data.transactions || []).filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0).toLocaleString()}
             </h3>
           </Card>
+          {category === 'personal' && (
+            <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30">
+              <p className="text-amber-600 dark:text-amber-400 font-bold text-sm">کۆی پاشەکەوت (هەڵگرتن)</p>
+              <h3 className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">
+                {stats.personalSavings.toLocaleString()}
+              </h3>
+            </Card>
+          )}
           <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
-            <p className="text-blue-600 dark:text-blue-400 font-bold text-sm">باڵانس</p>
+            <p className="text-blue-600 dark:text-blue-400 font-bold text-sm">باڵانسی لەبەردەست</p>
             <h3 className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-1">
-              {((data.transactions || []).filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0) - 
+              {(category === 'personal' ? stats.balance : (data.transactions || []).filter(t => t.category === category && t.type === 'income').reduce((acc, t) => acc + t.amount, 0) - 
                 (data.transactions || []).filter(t => t.category === category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0)).toLocaleString()}
             </h3>
           </Card>
@@ -2511,8 +2523,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <p className={cn("font-black text-lg", t.type === 'income' ? "text-green-600" : "text-red-600")}>
-                        {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}
+                      <p className={cn("font-black text-lg", 
+                        t.type === 'income' ? "text-green-600" : 
+                        t.type === 'expense' ? "text-red-600" : 
+                        "text-amber-600")}>
+                        {t.type === 'income' ? '+' : 
+                         t.type === 'expense' ? '-' : 
+                         t.savingsEffect === 'add' ? '+' : '-'}{t.amount.toLocaleString()}
                       </p>
                     </td>
                     <td className="px-6 py-5">
