@@ -507,6 +507,7 @@ export default function App() {
 
         setData(updatedData);
         addToast(newNotification.message, 'info');
+        showNativeNotification(newNotification.title, newNotification.message);
 
         if (user) {
           await syncNotificationToFirebase(newNotification);
@@ -614,6 +615,36 @@ export default function App() {
     const id = crypto.randomUUID();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return false;
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  };
+
+  const showNativeNotification = (title: string, message: string) => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, {
+          body: message,
+          icon: 'https://cdn-icons-png.flaticon.com/512/11516/11516805.png',
+          badge: 'https://cdn-icons-png.flaticon.com/512/11516/11516805.png',
+          vibrate: [100, 50, 100],
+          dir: 'rtl',
+          lang: 'ku'
+        });
+      });
+    } else {
+      new Notification(title, { 
+        body: message,
+        icon: 'https://cdn-icons-png.flaticon.com/512/11516/11516805.png',
+        dir: 'rtl',
+        lang: 'ku'
+      });
+    }
   };
 
   // Removed local resizeImage implementation in favor of lib/imageUtils.ts
@@ -3185,6 +3216,42 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <span className="font-black text-[var(--text-main)]">دۆخی تاریک (Dark Mode)</span>
                       {darkMode ? <Moon className="w-6 h-6 text-blue-400" /> : <Sun className="w-6 h-6 text-orange-500" />}
                     </button>
+                  </div>
+
+                  <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border-main)] shadow-xl">
+                    <h2 className="text-2xl font-black text-[var(--text-main)] mb-6 flex items-center gap-3">
+                      <Bell className="w-8 h-8 text-blue-600" />
+                      ئاگادارکردنەوەکان
+                    </h2>
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-6 bg-[var(--bg-main)] rounded-2xl border border-[var(--border-main)] transition-all">
+                        <div className="space-y-1">
+                          <p className="font-black text-[var(--text-main)]">ئاگادارکردنەوەی سەر شاشە</p>
+                          <p className="text-xs text-[var(--text-muted)] font-bold">بۆ ئەوەی نۆتیفیکەیشنەکان بێنە سەر شاشەی قفڵ</p>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            const granted = await requestNotificationPermission();
+                            if (granted) {
+                              addToast('ئاگادارکردنەوەکانی سەر شاشە چالاک کرا', 'success');
+                              showNativeNotification('سەركەوتوو بوو', 'ئێستا ئاگادارکردنەوەکان دەبینیت لە سەر شاشەی قفڵ');
+                            } else {
+                              addToast('ڕێگری لە ئاگادارکردنەوەکان کرا', 'error');
+                            }
+                          }}
+                          className={cn(
+                            "px-6 py-3 rounded-xl font-black transition-all",
+                            (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')
+                              ? "bg-green-100 text-green-700 cursor-default"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          )}
+                        >
+                          {(typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') 
+                            ? 'چالاکە' 
+                            : 'چالاککردن'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
