@@ -78,7 +78,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, MaintenanceInvoice, Activity } from './types';
+import { Task, Transaction, AppData, WishlistItem, Debt, SavingsGoal, Product, MaintenanceInvoice, Activity, AppNotification } from './types';
 import { MaintenanceInvoiceManager } from './components/MaintenanceInvoiceManager';
 import { CustomerManager } from './components/CustomerManager';
 import { ReportsDashboard } from './components/ReportsDashboard';
@@ -104,7 +104,9 @@ import {
   syncProductToFirebase,
   syncBudgetToFirebase,
   deleteBudgetFromFirebase,
-  syncActivityToFirebase
+  syncActivityToFirebase,
+  syncNotificationToFirebase,
+  deleteNotificationFromFirebase
 } from './lib/storage';
 import { cn } from './lib/utils';
 import { FinancialDashboard } from './components/FinancialDashboard';
@@ -471,6 +473,84 @@ export default function App() {
     const budgetScore = limit > 0 ? Math.max(0, 100 - (todaySpent / limit) * 100) : 100;
     return Math.round(budgetScore);
   }, [data.transactions, data.dailyLimit]);
+
+  // --- Notification Logic ---
+  useEffect(() => {
+    const checkExpenseReminder = async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      // If we already reminded today, skip
+      if (data.lastExpenseReminderDate === today) return;
+
+      // Check if any expenses recorded today
+      const hasExpenseToday = (data.transactions || []).some(
+        t => t.type === 'expense' && t.date === today
+      );
+
+      // If no expenses and it's evening (e.g., after 8 PM) or we just want to remind once a day
+      // For now, let's just do it if not recorded and not reminded yet today
+      if (!hasExpenseToday) {
+        const newNotification: AppNotification = {
+          id: crypto.randomUUID(),
+          title: 'ئاگادارکردنەوەی خەرجی',
+          message: 'تکایە خەرجییەکانی ئەمڕۆت تۆمار بکە بۆ ئەوەی باری دارایی بەوردی بزانیت.',
+          timestamp: new Date().toISOString(),
+          read: false,
+          type: 'expense_reminder'
+        };
+
+        const updatedData = {
+          ...data,
+          notifications: [newNotification, ...(data.notifications || [])],
+          lastExpenseReminderDate: today
+        };
+
+        setData(updatedData);
+        addToast(newNotification.message, 'info');
+
+        if (user) {
+          await syncNotificationToFirebase(newNotification);
+          await syncSettingsToFirebase({ lastExpenseReminderDate: today });
+        }
+      }
+    };
+
+    // Run check 30 seconds after start, then every hour
+    const timer = setTimeout(checkExpenseReminder, 30000);
+    const interval = setInterval(checkExpenseReminder, 3600000);
+    
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [data, user]);
+
+  const markNotificationAsRead = async (id: string) => {
+    const notification = (data.notifications || []).find(n => n.id === id);
+    if (!notification) return;
+
+    const updatedNotifications = (data.notifications || []).map(n => 
+      n.id === id ? { ...n, read: true } : n
+    );
+
+    setData(prev => ({ ...prev, notifications: updatedNotifications }));
+
+    if (user) {
+      await syncNotificationToFirebase({ ...notification, read: true });
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    setData(prev => ({
+      ...prev,
+      notifications: (prev.notifications || []).filter(n => n.id !== id)
+    }));
+
+    if (user) {
+      await deleteNotificationFromFirebase(id);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
 
@@ -484,6 +564,7 @@ export default function App() {
   }, [darkMode]);
 
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [showDebtModal, setShowDebtModal] = useState(false);
@@ -1844,6 +1925,78 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
     );
   };
 
+  const renderNotifications = () => {
+    const notifications = data.notifications || [];
+    
+    return (
+      <div className="space-y-6 pb-24">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-2">
+            <Bell className="w-7 h-7 text-blue-600" /> ئاگادارکردنەوەکان
+          </h2>
+          {notifications.some(n => !n.read) && (
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => notifications.forEach(n => !n.read && markNotificationAsRead(n.id))}
+            >
+              هەمووی وەک خوێندراوە نیشان بدە
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          {notifications.length === 0 ? (
+            <div className="text-center py-20 bg-[var(--bg-card)] rounded-[40px] border border-dashed border-[var(--border-color)]">
+              <div className="w-20 h-20 bg-[var(--bg-main)] rounded-full flex items-center justify-center mx-auto mb-4 opacity-20">
+                <Bell className="w-10 h-10 text-[var(--text-muted)]" />
+              </div>
+              <p className="text-[var(--text-muted)] font-black text-xl">هیچ ئاگادارکردنەوەیەک نییە</p>
+            </div>
+          ) : (
+            notifications.map((n, idx) => (
+              <Card 
+                key={`${n.id}-noti-${idx}`} 
+                className={cn(
+                  "p-5 transition-all group",
+                  !n.read ? "border-blue-200 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-900/5 shadow-md" : "opacity-80"
+                )}
+                onClick={() => markNotificationAsRead(n.id)}
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      {!n.read && <div className="w-2 h-2 bg-blue-600 rounded-full shrink-0" />}
+                      <h3 className="font-black text-lg text-[var(--text-main)]">{n.title}</h3>
+                    </div>
+                    <p className="text-[var(--text-muted)] font-bold text-sm leading-relaxed">{n.message}</p>
+                    <div className="flex items-center gap-3 mt-4 text-[10px] font-black uppercase text-[var(--text-muted)]">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {format(parseISO(n.timestamp), 'yyyy/MM/dd HH:mm')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(n.id);
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderSavings = () => {
     return (
       <div className="space-y-6 pb-24">
@@ -2807,6 +2960,15 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             >
               <Menu className="w-6 h-6" />
             </button>
+            <button 
+              onClick={() => setShowNotificationCenter(true)}
+              className="relative w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all ml-4 shrink-0"
+            >
+              <Bell className="w-6 h-6" />
+              {(data.notifications || []).some(n => !n.read) && (
+                <span className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-[var(--bg-card)]" />
+              )}
+            </button>
             <div className="text-right">
               <div className="flex items-center gap-2">
                 <motion.h1 
@@ -2922,6 +3084,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                     { id: 'wishlist', label: 'ئاواتەکان', icon: Sparkles },
                     { id: 'debts', label: 'قەرزەکان', icon: CreditCard },
                     { id: 'savings', label: 'پاشەکەوت', icon: Vault },
+                    { id: 'notifications', label: 'ئاگادارکردنەوەکان', icon: Bell },
                     { id: 'history', label: 'مێژووی تۆمارەکان', icon: History },
                     { id: 'settings', label: 'ڕێکخستن', icon: Settings },
                   ].map((tab, idx) => (
@@ -2981,6 +3144,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               {activeTab === 'wishlist' && renderWishlist()}
               {activeTab === 'debts' && renderDebts()}
               {activeTab === 'savings' && renderSavings()}
+              {activeTab === 'notifications' && renderNotifications()}
               {activeTab === 'history' && renderAllTransactions()}
               {activeTab === 'settings' && (
                 <div className="max-w-2xl mx-auto space-y-8">
@@ -3272,6 +3436,66 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : null}
                   تۆمارکردنی ئیش
                 </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showNotificationCenter && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNotificationCenter(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="p-8 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)] shrink-0">
+                <h3 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
+                  <Bell className="w-8 h-8 text-blue-600" />
+                  ئاگادارکردنەوەکان
+                </h3>
+                <button onClick={() => setShowNotificationCenter(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              <div className="p-8 space-y-6 overflow-y-auto flex-1">
+                {(data.notifications || []).length === 0 ? (
+                  <div className="text-center py-20 opacity-30">
+                    <Bell className="w-20 h-20 mx-auto mb-4" />
+                    <h3 className="text-2xl font-black">هیچ ئاگادارکردنەوەیەک نییە</h3>
+                  </div>
+                ) : (
+                  (data.notifications || []).map((n, idx) => (
+                    <motion.div 
+                      key={`modal-noti-${n.id}-${idx}`}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={cn(
+                        "p-5 rounded-3xl border border-[var(--border-color)] relative transition-all group",
+                        !n.read ? "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/30" : "bg-[var(--bg-main)]"
+                      )}
+                    >
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1" onClick={() => markNotificationAsRead(n.id)}>
+                          <div className="flex items-center gap-2 mb-1">
+                            {!n.read && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
+                            <h4 className="font-black text-[var(--text-main)]">{n.title}</h4>
+                          </div>
+                          <p className="text-sm font-bold text-[var(--text-muted)] leading-relaxed">{n.message}</p>
+                          <span className="text-[10px] font-black text-[var(--text-muted)] mt-3 block">
+                            {format(parseISO(n.timestamp), 'yyyy/MM/dd HH:mm')}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => deleteNotification(n.id)}
+                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+              <div className="p-8 border-t border-[var(--border-color)] bg-[var(--bg-main)] shrink-0">
+                <Button className="w-full py-5 rounded-3xl text-lg shrink-0" onClick={() => {
+                  setActiveTab('notifications');
+                  setShowNotificationCenter(false);
+                }}>بینینی هەمووی</Button>
               </div>
             </motion.div>
           </div>

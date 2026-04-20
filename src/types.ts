@@ -168,6 +168,15 @@ export type Activity = {
   userId?: string;
 };
 
+export type AppNotification = {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  type: 'reminder' | 'system' | 'alert' | 'expense_reminder';
+};
+
 export type AppData = {
   tasks: Task[];
   transactions: Transaction[];
@@ -183,4 +192,6 @@ export type AppData = {
   descriptions: string[];
   history?: Record<string, string[]>;
   customTabs?: string[];
+  notifications?: AppNotification[];
+  lastExpenseReminderDate?: string;
 };

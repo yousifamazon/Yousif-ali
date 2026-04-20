@@ -1,4 +1,4 @@
-import { AppData, Task, Transaction, MaintenanceInvoice, Activity } from "../types";
+import { AppData, Task, Transaction, MaintenanceInvoice, Activity, AppNotification } from "../types";
 import { 
   db, 
   auth, 
@@ -31,6 +31,8 @@ export const getStoredData = (): AppData => {
     debts: [],
     savingsGoals: [],
     products: [],
+    notifications: [],
+    lastExpenseReminderDate: '',
     descriptions: defaultDescriptions, 
     history: {} 
   };
@@ -179,7 +181,7 @@ export const deleteTransactionFromFirebase = async (transactionId: string) => {
   }
 };
 
-export const syncSettingsToFirebase = async (settings: { descriptions?: string[], history?: any, exchangeRate?: number }) => {
+export const syncSettingsToFirebase = async (settings: { descriptions?: string[], history?: any, exchangeRate?: number, lastExpenseReminderDate?: string }) => {
   if (!auth.currentUser) return;
   const path = `users/${auth.currentUser.uid}/settings/main`;
   try {
@@ -346,6 +348,27 @@ export const syncActivityToFirebase = async (activity: Activity) => {
     await setDoc(docRef, { ...activity, userId: auth.currentUser.uid });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const syncNotificationToFirebase = async (notification: AppNotification) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/notifications/${notification.id}`;
+  try {
+    const docRef = doc(db, path);
+    await setDoc(docRef, { ...notification, userId: auth.currentUser.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const deleteNotificationFromFirebase = async (id: string) => {
+  if (!auth.currentUser) return;
+  const path = `users/${auth.currentUser.uid}/notifications/${id}`;
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 };
 

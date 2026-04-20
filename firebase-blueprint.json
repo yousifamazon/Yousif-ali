@@ -202,6 +202,21 @@
         "userId": { "type": "string" }
       },
       "required": ["id", "category", "amount", "userId"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "An application notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["reminder", "system", "alert", "expense_reminder"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "title", "message", "timestamp", "read", "type", "userId"]
     }
   },
   "firestore": {
@@ -244,6 +259,10 @@
     "/users/{userId}/budgets/{budgetId}": {
       "schema": "Budget",
       "description": "User's monthly budgets"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "User's notifications"
     }
   }
 }
