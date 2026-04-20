@@ -453,6 +453,17 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+
+  const isInIframe = useMemo(() => {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -618,9 +629,24 @@ export default function App() {
   };
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return false;
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
+    if (!('Notification' in window)) {
+      addToast('ئەم وێبگەرە پشتگیری ئاگادارکردنەوە ناکات', 'error');
+      return false;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotifPermission(permission);
+      return permission === 'granted';
+    } catch (error) {
+      console.error("Permission request failed", error);
+      if (isInIframe) {
+        addToast('تکایە بەرنامەکە لە پەڕەیەکی نوێ بکەرەوە بۆ ئەوەی ئاگادارکردنەوە چالاک بێت', 'info');
+      } else {
+        addToast('کێشەیەک لە چالاککردن هەبوو', 'error');
+      }
+      return false;
+    }
   };
 
   const showNativeNotification = (title: string, message: string) => {
@@ -635,7 +661,7 @@ export default function App() {
           vibrate: [100, 50, 100],
           dir: 'rtl',
           lang: 'ku'
-        });
+        } as any);
       });
     } else {
       new Notification(title, { 
@@ -643,7 +669,7 @@ export default function App() {
         icon: 'https://cdn-icons-png.flaticon.com/512/11516/11516805.png',
         dir: 'rtl',
         lang: 'ku'
-      });
+      } as any);
     }
   };
 
@@ -3231,26 +3257,43 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         </div>
                         <button 
                           onClick={async () => {
+                            if (isInIframe) {
+                              addToast('تکایە بەرنامەکە لە پەڕەیەکی نوێ بکەرەوە بۆ چالاککردنی ئاگادارکردنەوەکان', 'info');
+                              return;
+                            }
                             const granted = await requestNotificationPermission();
                             if (granted) {
                               addToast('ئاگادارکردنەوەکانی سەر شاشە چالاک کرا', 'success');
                               showNativeNotification('سەركەوتوو بوو', 'ئێستا ئاگادارکردنەوەکان دەبینیت لە سەر شاشەی قفڵ');
-                            } else {
-                              addToast('ڕێگری لە ئاگادارکردنەوەکان کرا', 'error');
+                            } else if (Notification.permission === 'denied') {
+                              addToast('تکایە لە ڕێکخستنی وێبگەرەکەت ڕێگە بە ئاگادارکردنەوە بدە', 'error');
                             }
                           }}
                           className={cn(
                             "px-6 py-3 rounded-xl font-black transition-all",
-                            (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')
-                              ? "bg-green-100 text-green-700 cursor-default"
-                              : "bg-blue-600 text-white hover:bg-blue-700"
+                            notifPermission === 'granted'
+                              ? "bg-green-500 text-white cursor-default"
+                              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
                           )}
                         >
-                          {(typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') 
-                            ? 'چالاکە' 
-                            : 'چالاککردن'}
+                          {notifPermission === 'granted' ? 'چالاکە' : 'چالاککردن'}
                         </button>
                       </div>
+                      
+                      {isInIframe && (
+                        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-3">
+                          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                          <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                            ئاگادارکردنەوەکان لە ناو پیشاندەردا (Preview) کار ناکەن. تکایە بەرنامەکە لە پەڕەیەکی نوێ (Open in new tab) بکەرەوە.
+                          </p>
+                        </div>
+                      )}
+
+                      {notifPermission === 'denied' && (
+                        <p className="text-[10px] font-bold text-red-500 px-2 leading-relaxed">
+                          ⚠️ وێبگەرەکەت ڕێگری لە ئاگادارکردنەوەکان دەکات. تکایە لە ڕێکخستنی سێرچ بار (Search Bar) یان سێتینگ ڕێگەی پێ بدە.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
