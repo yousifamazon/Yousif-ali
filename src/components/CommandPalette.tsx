@@ -82,14 +82,6 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, data, onSelec
       }
     });
 
-    // Search Invoices
-    data.invoices.forEach(inv => {
-      const title = `${inv.driverName || 'نەناسراو'} - ${inv.maintenanceType || 'وەسڵ'}`;
-      if (title.toLowerCase().includes(q) || inv.invoiceNumber?.toLowerCase().includes(q)) {
-        items.push({ type: 'invoice', id: inv.id, title, subtitle: `وەسڵی چاککردنەوە • ${inv.date}`, icon: FileText });
-      }
-    });
-
     return items.slice(0, 10);
   }, [query, data]);
 

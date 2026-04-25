@@ -98,8 +98,7 @@ export const FinancialDashboard: React.FC<Props> = ({
     const invoicesList = invoices || [];
     const debtsList = debts || [];
 
-    const income = transactionsList.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) +
-                   invoicesList.reduce((sum, inv) => sum + (inv.cashPaid || 0), 0);
+    const income = transactionsList.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     
     const expense = transactionsList.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     
@@ -157,8 +156,7 @@ export const FinancialDashboard: React.FC<Props> = ({
       savingsRate,
       totalCash,
       totalSavings,
-      totalOwedToMe: invoicesList.reduce((sum, inv) => sum + (inv.debtAmount || 0), 0) + 
-                     debtsList.filter(d => d.type === 'owing' && !d.completed).reduce((sum, d) => sum + d.amount, 0),
+      totalOwedToMe: debtsList.filter(d => d.type === 'owing' && !d.completed).reduce((sum, d) => sum + d.amount, 0),
       totalIOwe: debtsList.filter(d => d.type === 'owed' && !d.completed).reduce((sum, d) => sum + d.amount, 0)
     };
   }, [invoices, transactions, debts, savingsGoals]);
@@ -173,8 +171,7 @@ export const FinancialDashboard: React.FC<Props> = ({
       const dayInvoices = invoices.filter(inv => inv.date === dateStr);
       const dayTransactions = transactions.filter(t => t.date === dateStr);
       
-      const income = dayInvoices.reduce((sum, inv) => sum + (inv.cashPaid || 0), 0) +
-                     dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const income = dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
       
       const expense = dayTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
       
@@ -184,7 +181,7 @@ export const FinancialDashboard: React.FC<Props> = ({
         expense
       };
     });
-  }, [invoices, transactions]);
+  }, [transactions]);
 
   const forecastData = useMemo(() => {
     const dailyIncome = stats.income / 30;

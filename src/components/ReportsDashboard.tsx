@@ -38,43 +38,14 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
       const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
       const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-      // Maintenance Invoices
-      const invoices = data.maintenanceInvoices.filter(inv => isSameMonth(new Date(inv.date), month));
-      const maintenanceRevenue = invoices.reduce((sum, inv) => {
-        const amount = inv.totalAfterDiscount;
-        const rate = inv.exchangeRate || data.exchangeRate || 1500;
-        return sum + (inv.currency === 'USD' ? amount * rate : amount);
-      }, 0);
-      const maintenancePaid = invoices.reduce((sum, inv) => {
-        const amount = inv.cashPaid;
-        const rate = inv.exchangeRate || data.exchangeRate || 1500;
-        return sum + (inv.currency === 'USD' ? amount * rate : amount);
-      }, 0);
-
       return {
         name: monthStr,
-        income: income + maintenancePaid,
+        income: income,
         expense: expense,
-        revenue: maintenanceRevenue,
-        profit: (income + maintenancePaid) - expense
+        profit: income - expense
       };
     });
-  }, [data, last6Months]);
-
-  const workTypeData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    data.maintenanceInvoices.forEach(inv => {
-      inv.items.forEach(item => {
-        const type = item.name || 'گشتی';
-        counts[type] = (counts[type] || 0) + 1;
-      });
-    });
-
-    return Object.entries(counts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
-  }, [data.maintenanceInvoices]);
+  }, [data.transactions, last6Months]);
 
   return (
     <div className="space-y-8">
@@ -83,7 +54,7 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
         <p className="text-[var(--text-muted)] font-bold">شیکردنەوەی داهات و خەرجییەکان لە ٦ مانگی ڕابردوودا</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-[var(--bg-card)] p-6 rounded-3xl border border-[var(--border-color)] shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
@@ -119,21 +90,9 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
             {formatValue(monthlyData[monthlyData.length - 1].profit)}
           </p>
         </div>
-
-        <div className="bg-[var(--bg-card)] p-6 rounded-3xl border border-[var(--border-color)] shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl">
-              <Activity className="w-5 h-5" />
-            </div>
-            <span className="text-sm font-bold text-[var(--text-muted)]">کۆی ئیشی کارگە</span>
-          </div>
-          <p className="text-2xl font-black text-purple-600 dark:text-purple-400">
-            {formatValue(monthlyData[monthlyData.length - 1].revenue)}
-          </p>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-[var(--bg-card)] p-8 rounded-[40px] border border-[var(--border-color)] shadow-sm">
           <div className="flex items-center gap-3 mb-8">
             <Calendar className="w-6 h-6 text-blue-600" />
@@ -162,36 +121,6 @@ export const ReportsDashboard: React.FC<Props> = ({ data, currency = 'IQD', exch
                 <Area type="monotone" dataKey="income" stroke="#3b82f6" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} name="داهات" />
                 <Area type="monotone" dataKey="expense" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={3} name="خەرجی" />
               </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-[var(--bg-card)] p-8 rounded-[40px] border border-[var(--border-color)] shadow-sm">
-          <div className="flex items-center gap-3 mb-8">
-            <PieIcon className="w-6 h-6 text-indigo-600" />
-            <h3 className="text-xl font-black text-[var(--text-main)]">جۆرەکانی ئیش و پارچە</h3>
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={workTypeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {workTypeData.map((entry, index) => (
-                    <Cell key={`cell-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', borderRadius: '16px' }}
-                />
-                <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" />
-              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
