@@ -1252,6 +1252,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       description: newTask.description || '',
       details: newTask.details || [],
       date: newTask.date || format(new Date(), 'yyyy-MM-dd'),
+      dueDate: newTask.dueDate || '',
       category: newTask.category || 'personal',
       priority: newTask.priority || 'medium',
       workTypes: newTask.workTypes || []
@@ -3022,49 +3023,55 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] kurdish-font selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300">
-      <div className="max-w-6xl mx-auto px-4 pt-8 pb-32">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-10 pb-32">
         
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 no-print">
-          <div className="flex-shrink-0 flex justify-start items-center">
-            <button 
-              onClick={() => setShowSidebar(true)}
-              className="w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all ml-4 shrink-0"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <button 
-              onClick={() => setShowNotificationCenter(true)}
-              className="relative w-12 h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all ml-4 shrink-0"
-            >
-              <Bell className="w-6 h-6" />
-              {(data.notifications || []).some(n => !n.read) && (
-                <span className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-[var(--bg-card)]" />
-              )}
-            </button>
-            <div className="text-right">
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 no-print">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between lg:justify-start gap-4">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowSidebar(true)}
+                className="w-11 h-11 md:w-12 md:h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all shrink-0"
+              >
+                <Menu className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+              <button 
+                onClick={() => setShowNotificationCenter(true)}
+                className="relative w-11 h-11 md:w-12 md:h-12 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] shadow-sm hover:text-blue-600 transition-all shrink-0"
+              >
+                <Bell className="w-5 h-5 md:w-6 md:h-6" />
+                {(data.notifications || []).some(n => !n.read) && (
+                  <span className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-[var(--bg-card)]" />
+                )}
+              </button>
+              <div className="text-right sm:hidden">
+                <h1 className="text-2xl font-black text-[var(--text-main)] tracking-tight">رۆژانەی یوسف</h1>
+              </div>
+            </div>
+            
+            <div className="text-right hidden sm:block">
               <div className="flex items-center gap-2">
                 <motion.h1 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="text-4xl font-black text-[var(--text-main)] tracking-tight"
+                  className="text-3xl md:text-4xl font-black text-[var(--text-main)] tracking-tight"
                 >
                   رۆژانەی یوسف
                 </motion.h1>
-                <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-md">PRO</div>
+                <div className="px-2 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-md">PRO</div>
                 <div className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-all border",
+                  "hidden xs:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-all border",
                   isOnline ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30" : "bg-red-50 text-red-600 border-red-100 dark:bg-red-900/10 dark:border-red-900/30"
                 )}>
                   <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
                   {isOnline ? 'لەسەر هێڵ' : 'دەرەوەی هێڵ'}
                 </div>
               </div>
-              <p className="text-[var(--text-muted)] font-bold mt-1.5 opacity-80">بەڕێوەبردنی کار و دارایی فەرمی</p>
+              <p className="text-[10px] md:text-xs font-bold text-[var(--text-muted)] mt-1 opacity-80 uppercase tracking-tighter">بەرنامەی فەرمی بەڕێوەبردنی کار</p>
             </div>
           </div>
 
-          <div className="flex flex-1 items-center gap-3 max-w-xl">
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 lg:flex-1 lg:max-w-2xl lg:justify-end">
             <div className="relative flex-1">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" />
               <input 

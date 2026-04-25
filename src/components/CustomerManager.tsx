@@ -142,7 +142,7 @@ export const CustomerManager: React.FC<Props> = ({ invoices, onViewInvoice }) =>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               <div className="p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-color)]">
                 <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">کۆی ئیش</p>
                 <p className="text-sm font-black text-[var(--text-main)]">{customer.totalBusiness.toLocaleString()}</p>

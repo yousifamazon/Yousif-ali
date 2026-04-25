@@ -1,8 +1,8 @@
-const CACHE_NAME = 'yousif-daily-v2';
+const CACHE_NAME = 'yousif-daily-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json?v=2'
+  '/manifest.json?v=3'
 ];
 
 self.addEventListener('install', (event) => {

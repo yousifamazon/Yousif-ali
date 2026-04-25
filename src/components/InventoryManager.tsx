@@ -155,7 +155,45 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ items, onSav
 
       {/* Inventory List */}
       <div className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-main)] overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-[var(--border-main)]">
+          {filteredItems.map((item, idx) => (
+            <div key={`inv-card-${item.id}-${idx}`} className="p-5 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-black text-lg text-[var(--text-main)]">{item.name}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-1">{item.category}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleEdit(item)} className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={() => onDelete(item.id)} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between bg-[var(--bg-main)] p-3 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => updateQuantity(item.id, -1)} className="p-2 bg-red-500/10 text-red-600 rounded-lg"><PackageMinus className="w-5 h-5" /></button>
+                  <span className={cn("font-black text-lg min-w-[3rem] text-center", item.quantity <= item.minQuantity ? "text-red-600" : "text-[var(--text-main)]")}>
+                    {item.quantity} {item.unit}
+                  </span>
+                  <button onClick={() => updateQuantity(item.id, 1)} className="p-2 bg-green-500/10 text-green-600 rounded-lg"><PackagePlus className="w-5 h-5" /></button>
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase">نرخی فرۆشتن</div>
+                  <div className="font-black text-green-600">{item.salePrice.toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="flex justify-between text-xs font-bold text-[var(--text-muted)] pt-2">
+                <span>کڕین: {item.purchasePrice.toLocaleString()} د.ع</span>
+                <span>{format(new Date(item.lastUpdated), 'yyyy-MM-dd HH:mm')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-right">
             <thead>
               <tr className="bg-[var(--bg-main)] border-b border-[var(--border-main)]">
@@ -221,16 +259,15 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ items, onSav
                   </td>
                 </tr>
               ))}
-              {filteredItems.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-[var(--text-muted)] font-bold">
-                    هیچ پارچەیەک نەدۆزرایەوە
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+
+        {filteredItems.length === 0 && (
+          <div className="px-6 py-12 text-center text-[var(--text-muted)] font-bold bg-[var(--bg-main)]/30">
+            هیچ پارچەیەک نەدۆزرایەوە
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}

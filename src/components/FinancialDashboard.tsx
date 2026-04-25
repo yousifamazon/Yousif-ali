@@ -224,36 +224,36 @@ export const FinancialDashboard: React.FC<Props> = ({
         animate={{ opacity: 1, y: 0 }}
         className="relative group perspective-1000"
       >
-        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-[40px] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-1000" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-[30px] md:rounded-[40px] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-1000" />
         
-        <div className="relative overflow-hidden rounded-[40px] bg-slate-900 shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:-translate-y-1 min-h-[400px] flex flex-col justify-center items-center p-10">
+        <div className="relative overflow-hidden rounded-[30px] md:rounded-[40px] bg-slate-900 shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:-translate-y-1 min-h-[300px] md:min-h-[400px] flex flex-col justify-center items-center p-6 md:p-10">
           {/* Abstract Animated Backgrounds */}
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[100px] -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-125" />
-          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-600/20 rounded-full blur-[80px] -ml-24 -mb-24" />
+          <div className="absolute top-0 right-0 w-[200px] md:w-[400px] h-[200px] md:h-[400px] bg-blue-600/20 rounded-full blur-[60px] md:blur-[100px] -mr-16 md:-mr-32 -mt-16 md:-mt-32 transition-transform duration-1000 group-hover:scale-125" />
+          <div className="absolute bottom-0 left-0 w-[150px] md:w-[300px] h-[150px] md:h-[300px] bg-indigo-600/20 rounded-full blur-[50px] md:blur-[80px] -ml-12 md:-ml-24 -mb-12 md:-mb-24" />
           
-          <div className="relative z-10 flex flex-col items-center text-center">
+          <div className="relative z-10 flex flex-col items-center text-center w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-[10px] uppercase tracking-[0.3em] font-black text-blue-200/60">کۆی گشتی باڵانس</span>
+              <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-black text-blue-200/60">کۆی گشتی باڵانس</span>
             </div>
 
-            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-8 drop-shadow-2xl">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 md:mb-8 drop-shadow-2xl">
               {formatValue(stats.totalCash)}
             </h2>
 
-            <div className="w-full max-w-sm mb-12">
-              <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[32px] p-6 text-center transform hover:scale-105 transition-transform duration-500 group/savings">
+            <div className="w-full max-w-sm mb-8 md:mb-12">
+              <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[24px] md:rounded-[32px] p-4 md:p-6 text-center transform hover:scale-105 transition-transform duration-500 group/savings">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <Vault className="w-4 h-4 text-blue-300" />
-                  <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">کۆی پاشەکەوت (هەڵگرتن)</span>
+                  <Vault className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-300" />
+                  <span className="text-[9px] md:text-[10px] text-blue-300 font-bold uppercase tracking-widest">کۆی پاشەکەوت (هەڵگرتن)</span>
                 </div>
-                <div className="text-4xl font-black text-white group-hover/savings:text-blue-200 transition-colors">
+                <div className="text-3xl md:text-4xl font-black text-white group-hover/savings:text-blue-200 transition-colors">
                   {formatValue(stats.totalSavings)}
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-4 w-full">
+            <div className="grid grid-cols-3 gap-2 md:gap-4 w-full max-w-lg">
               {[
                 { label: 'داهات', type: 'income', icon: Plus },
                 { label: 'خەرجی', type: 'expense', icon: ArrowUpRight },
@@ -264,9 +264,9 @@ export const FinancialDashboard: React.FC<Props> = ({
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onAction?.(btn.type as any)}
-                  className="flex-1 min-w-[120px] max-w-[160px] py-4 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-xl flex items-center justify-center gap-3 transition-all text-white font-black text-xs"
+                  className="flex-1 py-3 md:py-4 rounded-xl md:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 transition-all text-white font-black text-[10px] md:text-xs"
                 >
-                  <btn.icon className="w-5 h-5" />
+                  <btn.icon className="w-4 h-4 md:w-5 md:h-5" />
                   <span>{btn.label}</span>
                 </motion.button>
               ))}
@@ -276,15 +276,15 @@ export const FinancialDashboard: React.FC<Props> = ({
       </motion.div>
 
       {/* --- Main Stats Grid --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Health Score Gauge */}
         <motion.div 
           whileHover={{ y: -5 }}
-          className="bg-[var(--bg-card)] p-8 rounded-[38px] border border-[var(--border-color)] shadow-sm flex flex-col items-center justify-center text-center overflow-hidden relative group"
+          className="bg-[var(--bg-card)] p-6 md:p-8 rounded-[30px] md:rounded-[38px] border border-[var(--border-color)] shadow-sm flex flex-col items-center justify-center text-center overflow-hidden relative group"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
-          <h4 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-wider mb-6">پلەی دۆخی دارایی</h4>
-          <div className="relative w-40 h-20 mb-4">
+          <div className="absolute top-0 right-0 w-24 md:w-32 h-24 md:h-32 bg-blue-500/5 rounded-full -mr-12 md:-mr-16 -mt-12 md:-mt-16 group-hover:scale-110 transition-transform" />
+          <h4 className="text-[10px] md:text-xs font-black text-[var(--text-muted)] uppercase tracking-wider mb-4 md:mb-6">پلەی دۆخی دارایی</h4>
+          <div className="relative w-32 h-16 md:w-40 md:h-20 mb-4">
             <svg className="w-full h-full" viewBox="0 0 100 50">
               <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="currentColor" strokeWidth="8" className="text-slate-100 dark:text-slate-800" strokeLinecap="round" />
               <motion.path 
@@ -298,41 +298,41 @@ export const FinancialDashboard: React.FC<Props> = ({
                 strokeLinecap="round" 
               />
             </svg>
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-2xl font-black text-[var(--text-main)]">
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-xl md:text-2xl font-black text-[var(--text-main)]">
               %{stats.healthScore}
             </div>
           </div>
-          <p className="text-[10px] font-bold text-[var(--text-muted)]">ڕەوشی هەنوکەیی</p>
+          <p className="text-[9px] md:text-[10px] font-bold text-[var(--text-muted)]">ڕەوشی هەنوکەیی</p>
         </motion.div>
 
-        <div className="bg-[var(--bg-card)] p-8 rounded-[38px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all group lg:col-span-1">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-500/20 group-hover:rotate-6 transition-transform">
-              <TrendingUp className="w-6 h-6" />
+        <div className="bg-[var(--bg-card)] p-6 md:p-8 rounded-[30px] md:rounded-[38px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all group">
+          <div className="flex items-center gap-3 md:gap-4 mb-4">
+            <div className="p-2 md:p-3 bg-emerald-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-emerald-500/20 group-hover:rotate-6 transition-transform">
+              <TrendingUp className="w-5 h-5 md:w-6 md:h-6" />
             </div>
-            <h4 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">کۆی داهات</h4>
+            <h4 className="text-[10px] md:text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">کۆی داهات</h4>
           </div>
-          <div className="text-2xl font-black text-[var(--text-main)]">{formatValue(stats.income)}</div>
+          <div className="text-xl md:text-2xl font-black text-[var(--text-main)]">{formatValue(stats.income)}</div>
         </div>
 
-        <div className="bg-[var(--bg-card)] p-8 rounded-[38px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all group lg:col-span-1">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-sky-500 text-white rounded-2xl shadow-lg shadow-sky-500/20 group-hover:rotate-6 transition-transform">
-              <Users className="w-6 h-6" />
+        <div className="bg-[var(--bg-card)] p-6 md:p-8 rounded-[30px] md:rounded-[38px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all group">
+          <div className="flex items-center gap-3 md:gap-4 mb-4">
+            <div className="p-2 md:p-3 bg-sky-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-sky-500/20 group-hover:rotate-6 transition-transform">
+              <Users className="w-5 h-5 md:w-6 md:h-6" />
             </div>
-            <h4 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">پارەی لای خەڵک</h4>
+            <h4 className="text-[10px] md:text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">پارەی لای خەڵک</h4>
           </div>
-          <div className="text-2xl font-black text-[var(--text-main)]">{formatValue(stats.totalOwedToMe)}</div>
+          <div className="text-xl md:text-2xl font-black text-[var(--text-main)]">{formatValue(stats.totalOwedToMe)}</div>
         </div>
 
-        <div className="bg-[var(--bg-card)] p-8 rounded-[38px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all group lg:col-span-1">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-rose-500 text-white rounded-2xl shadow-lg shadow-rose-500/20 group-hover:-rotate-6 transition-transform">
-              <TrendingDown className="w-6 h-6" />
+        <div className="bg-[var(--bg-card)] p-6 md:p-8 rounded-[30px] md:rounded-[38px] border border-[var(--border-color)] shadow-premium hover:shadow-hover transition-all group">
+          <div className="flex items-center gap-3 md:gap-4 mb-4">
+            <div className="p-2 md:p-3 bg-rose-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-rose-500/20 group-hover:-rotate-6 transition-transform">
+              <TrendingDown className="w-5 h-5 md:w-6 md:h-6" />
             </div>
-            <h4 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">قەرزی سەر یوسف</h4>
+            <h4 className="text-[10px] md:text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">قەرزی سەر یوسف</h4>
           </div>
-          <div className="text-2xl font-black text-[var(--text-main)]">{formatValue(stats.totalIOwe)}</div>
+          <div className="text-xl md:text-2xl font-black text-[var(--text-main)]">{formatValue(stats.totalIOwe)}</div>
         </div>
       </div>
 
@@ -355,7 +355,7 @@ export const FinancialDashboard: React.FC<Props> = ({
               </div>
             </div>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[250px] md:h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -444,7 +444,7 @@ export const FinancialDashboard: React.FC<Props> = ({
               </div>
             </div>
           </div>
-          <div className="w-full md:w-[400px] h-[250px]">
+          <div className="w-full md:w-[400px] h-[200px] md:h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={forecastData}>
                 <defs>
