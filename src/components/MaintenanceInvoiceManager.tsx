@@ -155,7 +155,10 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         ...invoice,
         cashPaid: invoice.totalAfterDiscount,
         debtAmount: 0,
-        remainingBalance: 0
+        remainingBalance: 0,
+        receivedFromFactory: invoice.totalAfterDiscount,
+        factoryOwesMe: 0,
+        iOweFactory: 0
       };
       onSave(updatedInvoice);
     }
@@ -167,7 +170,10 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         ...invoice,
         cashPaid: 0,
         debtAmount: invoice.totalAfterDiscount,
-        remainingBalance: invoice.totalAfterDiscount
+        remainingBalance: invoice.totalAfterDiscount,
+        receivedFromFactory: 0,
+        factoryOwesMe: invoice.totalAfterDiscount,
+        iOweFactory: 0
       };
       onSave(updatedInvoice);
     }
@@ -972,13 +978,13 @@ export const MaintenanceInvoiceManager: React.FC<Props> = ({ invoices, onSave, o
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border border-red-100 dark:border-red-800/30">
           <p className="text-sm text-red-600 dark:text-red-400 font-bold mb-1">کارگە قەرزدارە</p>
           <p className="text-2xl font-black text-red-700 dark:text-red-300">
-            {invoices.reduce((sum, inv) => sum + (inv.factoryOwesMe || 0), 0).toLocaleString()} د.ع
+            {invoices.filter(inv => (inv.debtAmount || 0) > 0).reduce((sum, inv) => sum + (inv.factoryOwesMe || 0), 0).toLocaleString()} د.ع
           </p>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-100 dark:border-green-800/30">
           <p className="text-sm text-green-600 dark:text-green-400 font-bold mb-1">پارەی کارگە لای من ماوە</p>
           <p className="text-2xl font-black text-green-700 dark:text-green-300">
-            {invoices.reduce((sum, inv) => sum + (inv.iOweFactory || 0), 0).toLocaleString()} د.ع
+            {invoices.filter(inv => (inv.debtAmount || 0) > 0).reduce((sum, inv) => sum + (inv.iOweFactory || 0), 0).toLocaleString()} د.ع
           </p>
         </div>
       </div>

@@ -145,6 +145,7 @@ if (typeof crypto === 'undefined') {
 import { AIAssistant } from './components/AIAssistant';
 import { CommandPalette } from './components/CommandPalette';
 import { ActivityFeed } from './components/ActivityFeed';
+import Login from './components/Login';
 import { Eye, EyeOff, Shield, ShieldAlert, BarChart3, History } from 'lucide-react';
 
 // --- Components ---
@@ -3003,6 +3004,21 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
       </div>
     );
   };
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-white font-bold">تکایە چاوەڕێ بکە...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] kurdish-font selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300">
