@@ -1,8 +1,8 @@
 const CACHE_NAME = 'yousif-daily-v3';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json?v=3'
+  './',
+  './index.html',
+  './manifest.json?v=3'
 ];
 
 self.addEventListener('install', (event) => {
@@ -48,7 +48,7 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: 'https://cdn-icons-png.flaticon.com/512/11516/11516805.png',
     badge: 'https://cdn-icons-png.flaticon.com/512/11516/11516805.png',
-    data: { url: data.url || '/' },
+    data: { url: data.url || './' },
     vibrate: [100, 50, 100],
     dir: 'rtl',
     lang: 'ku'
@@ -66,7 +66,7 @@ self.addEventListener('notificationclick', (event) => {
       if (clientList.length > 0) {
         return clientList[0].focus();
       }
-      return clients.openWindow('/');
+      return clients.openWindow('./');
     })
   );
 });
