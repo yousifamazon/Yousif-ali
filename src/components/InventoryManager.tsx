@@ -158,7 +158,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ items, onSav
         {/* Mobile Card View */}
         <div className="md:hidden divide-y divide-[var(--border-main)]">
           {filteredItems.map((item, idx) => (
-            <div key={`inv-card-${item.id}-${idx}`} className="p-5 space-y-4">
+            <div key={`inv-card-${item.id || 'id'}-${idx}`} className="p-5 space-y-4">
               <div className="flex justify-between items-start">
                 <div>
                   <div className="font-black text-lg text-[var(--text-main)]">{item.name}</div>
@@ -207,7 +207,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ items, onSav
             </thead>
             <tbody className="divide-y divide-[var(--border-main)]">
               {filteredItems.map((item, idx) => (
-                <tr key={`${item.id}-${idx}`} className="hover:bg-[var(--bg-main)]/50 transition-colors">
+                <tr key={`inv-row-${item.id || 'id'}-${idx}`} className="hover:bg-[var(--bg-main)]/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-bold text-[var(--text-main)]">{item.name}</div>
                     <div className="text-xs text-[var(--text-muted)]">دوا نوێکردنەوە: {format(new Date(item.lastUpdated), 'yyyy-MM-dd HH:mm')}</div>

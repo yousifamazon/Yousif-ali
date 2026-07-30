@@ -80,7 +80,7 @@ export const ActivityFeed: React.FC<Props> = ({ activities }) => {
             
             return (
               <motion.div
-                key={activity.id}
+                key={`${activity.id || 'act'}-${idx}`}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}

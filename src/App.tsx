@@ -1846,7 +1846,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             <div className="text-center py-12 text-[var(--text-muted)]">هیچ ئاواتێک نییە</div>
           ) : (
             items.map((item, idx) => (
-              <Card key={`${item.id}-wishlist-card-${idx}`} className={cn("p-5", item.completed && "opacity-60")}>
+              <Card key={`${item.id || 'item'}-wishlist-card-${idx}`} className={cn("p-5", item.completed && "opacity-60")}>
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -1925,7 +1925,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
 
         <div className="space-y-4">
           {(data.debts || []).map((debt, idx) => (
-            <Card key={`${debt.id}-debt-card-${idx}`} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
+            <Card key={`${debt.id || 'debt'}-debt-card-${idx}`} className={cn("transition-all", debt.completed && "opacity-60 bg-[var(--bg-main)]")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h4 className={cn("font-bold text-lg", debt.completed && "line-through text-[var(--text-muted)]")}>{debt.personName}</h4>
@@ -2015,7 +2015,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           ) : (
             notifications.map((n, idx) => (
               <Card 
-                key={`${n.id}-noti-${idx}`} 
+                key={`${n.id || 'noti'}-noti-${idx}`} 
                 className={cn(
                   "p-5 transition-all group",
                   !n.read ? "border-blue-200 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-900/5 shadow-md" : "opacity-80"
@@ -2076,7 +2076,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           {(data.savingsGoals || []).map((goal, idx) => {
             const progress = (goal.currentAmount / goal.targetAmount) * 100;
             return (
-              <Card key={`${goal.id}-savings-card-${idx}`} className="p-6 space-y-4">
+              <Card key={`${goal.id || 'goal'}-savings-card-${idx}`} className="p-6 space-y-4">
                 <div className="flex justify-between items-start">
                   <h4 className="font-bold text-xl">{goal.title}</h4>
                   <div className="flex items-center gap-2">
@@ -2214,7 +2214,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stats.budgetProgress.length > 0 ? (
               stats.budgetProgress.map((budget, idx) => (
-                <Card key={`${budget.id}-${idx}`} className="relative group">
+                <Card key={`${budget.id || 'b'}-${idx}`} className="relative group">
                   <button 
                     onClick={() => deleteBudget(budget.id)}
                     className="absolute top-4 left-4 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
@@ -2267,7 +2267,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {data.transactions.filter(t => t.isRecurring).map((t, idx) => (
-                <Card key={`recurring-${t.id}-${idx}`} className="border-r-4 border-r-amber-500">
+                <Card key={`recurring-${t.id || 'tx'}-${idx}`} className="border-r-4 border-r-amber-500">
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-black text-lg text-[var(--text-main)]">{t.description}</h4>
@@ -2343,9 +2343,9 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
         {/* Global Toast Notifications */}
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] space-y-3 w-full max-w-sm px-4 pointer-events-none">
           <AnimatePresence>
-            {toasts.map((t) => (
+            {toasts.map((t, idx) => (
               <motion.div
-                key={t.id}
+                key={`${t.id || 'toast'}-${idx}`}
                 initial={{ opacity: 0, y: -20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -2416,7 +2416,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
               <h3 className="text-lg font-black text-[var(--text-muted)] mr-2">{period}</h3>
               <div className="grid grid-cols-1 gap-4">
                 {filteredTasks.map((task, idx) => (
-                  <Card key={`${task.id}-d-task-${period}-${idx}`} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
+                  <Card key={`${task.id || 'task'}-d-task-${period}-${idx}`} className={cn("p-5 transition-all", task.completed && "opacity-50")}>
                     <div className="flex items-center gap-5">
                       <button onClick={() => toggleTask(task.id)} className={cn(
                         "transition-all transform active:scale-90",
@@ -2427,13 +2427,13 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
                           {(task.workTypes || []).map((wt, idx) => (
-                            <span key={`${task.id}-wt-${wt}-${idx}`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
+                            <span key={`${task.id || 'task'}-wt-${wt}-${idx}`} className="text-[9px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase">{wt}</span>
                           ))}
                         </div>
                         <h4 className={cn("font-black text-xl text-[var(--text-main)]", task.completed && "line-through")}>{task.title}</h4>
                         <div className="mt-2 space-y-1">
                           {(task.details || []).map((d, i) => (
-                            <div key={`${task.id}-detail-${d.id || i}`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                            <div key={`${task.id || 'task'}-detail-${d.id || 'd'}-${i}`} className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
                               <p className="text-xs font-black text-[var(--text-muted)]">{d.subject}</p>
                               <p className="text-xs text-[var(--text-muted)] mt-0.5">{d.work}</p>
                             </div>
@@ -2690,7 +2690,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </tr>
                 ) : (
                   filteredTransactions.map((t, idx) => (
-                    <tr key={`${t.id}-finance-${idx}`} className="hover:bg-[var(--bg-main)] transition-colors">
+                    <tr key={`${t.id || 'tx'}-finance-${idx}`} className="hover:bg-[var(--bg-main)] transition-colors">
                     <td className="px-6 py-6">
                       <p className="font-bold text-[var(--text-main)] text-lg mb-2">{t.description}</p>
                       <div className="flex flex-wrap gap-2">
@@ -2725,7 +2725,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                         {t.receiptItems && t.receiptItems.length > 0 && (
                           <div className="w-full mt-3 space-y-1.5">
                             {t.receiptItems.map((item, i) => (
-                              <div key={`${item.id || 'item'}-${i}-preview`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
+                              <div key={`${item.id || 'item'}-${t.id || 'tx'}-${i}-preview`} className="flex justify-between text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-main)] px-3 py-1.5 rounded-lg border border-[var(--border-color)]">
                                 <span>{item.name}</span>
                                 <span className="font-bold">{item.price.toLocaleString()} دینار</span>
                               </div>
@@ -2920,7 +2920,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   </tr>
                 ) : (
                   filtered.map((t, idx) => (
-                    <tr key={`history-row-${t.id}-${idx}`} className="group hover:bg-[var(--bg-main)]/40 transition-all duration-300">
+                    <tr key={`history-row-${t.id || 'tx'}-${idx}`} className="group hover:bg-[var(--bg-main)]/40 transition-all duration-300">
                       <td className="px-8 py-7">
                         <div className="flex items-center gap-5">
                           <div className={cn(
@@ -3488,7 +3488,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                   
                   <div className="space-y-3">
                     {(newTask.details || [{ id: crypto.randomUUID(), subject: '', work: '' }]).map((detail, idx) => (
-                      <div key={detail.id || `task-modal-detail-${idx}`} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
+                      <div key={`task-modal-detail-${detail.id || 'id'}-${idx}`} className="grid grid-cols-12 gap-2 items-start bg-[var(--bg-main)] p-4 rounded-2xl">
                         <div className="col-span-5 space-y-1">
                           <label className="text-[10px] font-bold text-[var(--text-muted)]">بابەت</label>
                           <HistoryInput 
@@ -3594,7 +3594,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                 ) : (
                   (data.notifications || []).map((n, idx) => (
                     <motion.div 
-                      key={`modal-noti-${n.id}-${idx}`}
+                      key={`modal-noti-${n.id || 'noti'}-${idx}`}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       className={cn(
@@ -3848,7 +3848,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                               {newTransaction.receiptItems.map((item, idx) => (
-                                <tr key={item.id || `edit-receipt-${idx}`}>
+                                <tr key={`edit-receipt-${item.id || 'item'}-${idx}`}>
                                   <td className="px-3 py-2 font-bold">{item.name}</td>
                                   <td className="px-3 py-2 text-center">{item.quantity || '-'}</td>
                                   <td className="px-3 py-2 text-center">{(item.unitPrice || item.price).toLocaleString()}</td>
@@ -3984,7 +3984,7 @@ ${t.debtAmount ? `🚩 قەرز: ${t.debtAmount.toLocaleString()} دینار` : 
                       <label className="text-sm font-black text-[var(--text-muted)] mr-1">وەسڵ (بابەت و نرخ)</label>
                       <div className="space-y-3">
                         {(newTransaction.receiptItems || []).map((item, index) => (
-                          <div key={item.id || `new-receipt-item-${index}`} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
+                          <div key={`new-receipt-item-${item.id || 'item'}-${index}`} className="flex gap-2 items-center bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)] shadow-sm">
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-black text-[var(--text-muted)] mr-1">بابەت</label>
                               <input 

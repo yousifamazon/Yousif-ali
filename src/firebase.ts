@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
 import { 
   getFirestore, 
+  initializeFirestore,
   collection, 
   doc, 
   setDoc, 
@@ -16,7 +17,8 @@ import {
   orderBy,
   limit,
   getDocFromServer,
-  enableIndexedDbPersistence
+  persistentLocalCache,
+  persistentMultipleTabManager
 } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -25,29 +27,14 @@ import firebaseConfig from '../firebase-applet-config.json';
 // Initialize Firebase SDK
 let app;
 try {
-  console.log("Initializing Firebase with config:", firebaseConfig.projectId);
+  console.log("Initializing Firebase with project:", firebaseConfig.projectId);
   app = initializeApp(firebaseConfig);
 } catch (error) {
   console.error("Firebase initialization failed:", error);
-  // Create a dummy app or throw a clearer error
-  throw new Error("شکستی هێنا لە پەیوەندیکردن بە سێرڤەر (Firebase)");
+  throw new Error("شکستی هێنا لە پێوەندیکردن بە سێرڤەر (Firebase)");
 }
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
-// Enable offline persistence
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled
-      // in one tab at a time.
-      console.warn('Firestore persistence failed-precondition');
-    } else if (err.code === 'unimplemented') {
-      // The current browser does not support all of the
-      // features required to enable persistence
-      console.warn('Firestore persistence unimplemented');
-    }
-  });
-}
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
@@ -57,8 +44,8 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
     }
   }
 }

@@ -397,7 +397,7 @@ export const FinancialDashboard: React.FC<Props> = ({
                   dataKey="value"
                 >
                   {stats.categoryData.map((entry, index) => (
-                    <Cell key={`cell-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${entry.name || 'entry'}-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', border: 'none' }} />
@@ -406,7 +406,7 @@ export const FinancialDashboard: React.FC<Props> = ({
           </div>
           <div className="w-full space-y-3 mt-4">
             {stats.categoryData.map((cat, idx) => (
-              <div key={`dashboard-cat-${cat.name}-${idx}`} className="flex items-center justify-between">
+              <div key={`dashboard-cat-${cat.name || 'cat'}-${idx}`} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                   <span className="text-xs font-bold text-[var(--text-main)]">{cat.name}</span>

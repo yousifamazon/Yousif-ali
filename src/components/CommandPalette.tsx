@@ -151,7 +151,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, data, onSelec
                 <div className="px-3 space-y-1">
                   {results.map((item, idx) => (
                     <button
-                      key={`${item.type}-${item.id}`}
+                      key={`${item.type}-${item.id || 'id'}-${idx}`}
                       onClick={() => { onSelectItem(item.type, item.id); onClose(); }}
                       onMouseEnter={() => setSelectedIndex(idx)}
                       className={cn(
